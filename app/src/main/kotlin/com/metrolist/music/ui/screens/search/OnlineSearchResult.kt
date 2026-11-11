@@ -572,6 +572,10 @@ fun OnlineSearchResult(
                     state = lazyListState,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
+                    item(key = "zuno_panel_results") {
+                        com.metrolist.music.zuno.ZunoSearchSection(query = query.text)
+                    }
+
                     if (isShowingSummary) {
                         searchSummary?.summaries?.forEach { summary ->
                             item {

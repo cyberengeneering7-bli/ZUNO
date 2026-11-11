@@ -52,6 +52,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import com.metrolist.music.zuno.ZunoPanelState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -93,13 +95,39 @@ private data class Contributor(
     val favoriteSongVideoId: String? = null
 )
 
+private data class AboutRow(
+    val label: String,
+    val iconRes: Int,
+    val url: String,
+    val supporting: String?,
+)
+
+private fun aboutIcon(key: String): Int =
+    when (key) {
+        "github" -> R.drawable.github
+        "instagram" -> R.drawable.instagram
+        "telegram" -> R.drawable.telegram
+        "discord" -> R.drawable.discord
+        "website" -> R.drawable.language
+        "info" -> R.drawable.info
+        else -> R.drawable.link
+    }
+
 private data class CommunityLink(
     val labelRes: Int,
     val iconRes: Int,
     val url: String
 )
 
+// ZUNO developer (naam yahan badal sakte ho)
 private val meldDeveloper = Contributor(
+    name = "Sheikh Azim",
+    roleRes = R.string.credits_developer,
+    githubHandle = "sheikhazim10000-ctrl",
+)
+
+// Original Meld developer (GPL credit - hatana nahi hai)
+private val meldOriginalDeveloper = Contributor(
     name = "Francesco Grazioso",
     roleRes = R.string.credits_developer,
     githubHandle = "FrancescoGrazioso",
@@ -121,8 +149,7 @@ private val upstreamCollaborators = listOf(
 )
 
 private val communityLinks = listOf(
-    CommunityLink(R.string.credits_discord, R.drawable.discord, "https://discord.gg/sAErRUVbsK"),
-    CommunityLink(R.string.credits_view_repo, R.drawable.github, "https://github.com/FrancescoGrazioso/Meld"),
+    CommunityLink(R.string.credits_github, R.drawable.github, "https://github.com/sheikhazim10000-ctrl"),
     CommunityLink(R.string.credits_license_name, R.drawable.info, "https://github.com/FrancescoGrazioso/Meld/blob/main/LICENSE")
 )
 
@@ -295,6 +322,30 @@ fun AboutScreen(
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
     val uriHandler = LocalUriHandler.current
+
+    // ZUNO: About ke links aur developer naam/photo panel se aate hain
+    val aboutContext = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(Unit) { ZunoPanelState.refreshAbout(aboutContext) }
+    val remoteLinks by ZunoPanelState.aboutLinks.collectAsStateWithLifecycle()
+    val aboutInfo by ZunoPanelState.aboutInfo.collectAsStateWithLifecycle()
+    val devName = aboutInfo.name.ifBlank { meldDeveloper.name }
+    val devGithubUrl = remoteLinks.firstOrNull { it.icon == "github" }?.url ?: meldDeveloper.githubUrl
+    val licenseLabel = stringResource(R.string.credits_license_name)
+    val licenseDesc = stringResource(R.string.credits_license_desc)
+    val githubLabel = stringResource(R.string.credits_github)
+    val aboutRows =
+        (
+            if (remoteLinks.isEmpty()) {
+                listOf(AboutRow(githubLabel, R.drawable.github, meldDeveloper.githubUrl, null))
+            } else {
+                remoteLinks.map { AboutRow(it.label, aboutIcon(it.icon), it.url, null) }
+            }
+        ) + AboutRow(
+            licenseLabel,
+            R.drawable.info,
+            "https://github.com/FrancescoGrazioso/Meld/blob/main/LICENSE",
+            licenseDesc,
+        )
     val playerConnection = LocalPlayerConnection.current
     val coroutineScope = rememberCoroutineScope()
     val localSnackbarHostState = remember { SnackbarHostState() }
@@ -333,28 +384,19 @@ fun AboutScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.padding(vertical = 32.dp)
                 ) {
-                    Box(
+                    androidx.compose.foundation.Image(
+                        painter = painterResource(R.drawable.zuno_logo),
+                        contentDescription = "ZUNO",
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .size(80.dp)
-                            .clip(MaterialShapes.SoftBurst.toShape())
-                            .background(MaterialTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        androidx.compose.foundation.Image(
-                            painter = painterResource(R.drawable.small_icon),
-                            contentDescription = stringResource(R.string.metrolist),
-                            colorFilter = ColorFilter.tint(
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                blendMode = BlendMode.SrcIn,
-                            ),
-                            modifier = Modifier.size(40.dp)
-                        )
-                    }
+                            .size(88.dp)
+                            .clip(RoundedCornerShape(24.dp))
+                    )
             
                     Spacer(Modifier.height(16.dp))
             
                     Text(
-                        text = stringResource(R.string.metrolist),
+                        text = "ZUNO",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Black,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -401,17 +443,30 @@ fun AboutScreen(
             SectionHeader(stringResource(R.string.credits_developer))
     
             // Meld developer
-            ContributorAvatar(
-                avatarUrl = meldDeveloper.avatarUrl,
-                sizeDp = 180,
-                shape = CircleShape,
-                contentDescription = meldDeveloper.name,
-            )
+            if (aboutInfo.photoUrl.isNotBlank()) {
+                coil3.compose.AsyncImage(
+                    model = aboutInfo.photoUrl,
+                    contentDescription = devName,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(180.dp)
+                        .clip(CircleShape)
+                )
+            } else {
+                androidx.compose.foundation.Image(
+                    painter = painterResource(R.drawable.about_photo),
+                    contentDescription = devName,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(180.dp)
+                        .clip(CircleShape)
+                )
+            }
     
             Spacer(Modifier.height(24.dp))
     
             Text(
-                text = meldDeveloper.name,
+                text = devName,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -431,17 +486,18 @@ fun AboutScreen(
                         label = stringResource(R.string.credits_github),
                         iconRes = R.drawable.github,
                         iconSize = 24.dp,
-                        onClick = { uriHandler.openUri(meldDeveloper.githubUrl) }
+                        onClick = { uriHandler.openUri(devGithubUrl) }
                     )
                 }
             }
     
             Spacer(Modifier.height(48.dp))
     
-            SectionHeader(stringResource(R.string.credits_original_project))
-    
+            SectionHeader("Open source")
+
             Text(
-                text = stringResource(R.string.credits_based_on_metrolist),
+                text = "ZUNO is built on the open-source projects Meld and Metrolist, " +
+                    "licensed under GPL-3.0. It comes without any warranty.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
@@ -450,69 +506,9 @@ fun AboutScreen(
                     .padding(bottom = 12.dp),
                 textAlign = TextAlign.Start
             )
-    
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-            ) {
-                val allUpstreamContributors = listOf(upstreamLeadDeveloper) + upstreamCollaborators
-                Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                    allUpstreamContributors.forEachIndexed { index, contributor ->
-                        var clickCount by remember(contributor.name) { mutableIntStateOf(0) }
-                        ListItem(
-                            headlineContent = {
-                                Text(
-                                    text = contributor.name,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            },
-                            supportingContent = { Text(stringResource(contributor.roleRes)) },
-                            leadingContent = {
-                                ContributorAvatar(
-                                    avatarUrl = contributor.avatarUrl,
-                                    sizeDp = 56,
-                                    shape = contributor.polygon?.toShape() ?: CircleShape,
-                                    contentDescription = contributor.name,
-                                    onClick = {
-                                        handleEasterEggClick(
-                                            clickCount = clickCount,
-                                            favoriteSongVideoId = contributor.favoriteSongVideoId,
-                                            coroutineScope = coroutineScope,
-                                            snackbarHostState = localSnackbarHostState,
-                                            playerConnection = playerConnection,
-                                            wannaPlayStr = wannaPlayStr,
-                                            yeahStr = yeahStr,
-                                            onCountUpdate = { clickCount = it }
-                                        )
-                                    }
-                                )
-                            },
-                            trailingContent = {
-                                Icon(
-                                    painter = painterResource(R.drawable.github),
-                                    contentDescription = stringResource(R.string.credits_github),
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            modifier = Modifier.clickable { uriHandler.openUri(contributor.githubUrl) }
-                        )
-                        
-                        if (index < allUpstreamContributors.lastIndex) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 20.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                            )
-                        }
-                    }
-                }
-            }
-    
+
             Spacer(Modifier.height(32.dp))
-    
+
             SectionHeader(stringResource(R.string.community_and_info))
     
             Surface(
@@ -523,18 +519,18 @@ fun AboutScreen(
                     .padding(horizontal = 24.dp)
             ) {
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                    communityLinks.forEachIndexed { index, link ->
+                    aboutRows.forEachIndexed { index, row ->
                         ListItem(
-                            headlineContent = { Text(stringResource(link.labelRes), fontWeight = FontWeight.SemiBold) },
-                            supportingContent = if (link.labelRes == R.string.credits_license_name) {
-                                { Text(stringResource(R.string.credits_license_desc)) }
+                            headlineContent = { Text(row.label, fontWeight = FontWeight.SemiBold) },
+                            supportingContent = if (row.supporting != null) {
+                                { Text(row.supporting) }
                             } else null,
-                            leadingContent = { Icon(painterResource(link.iconRes), null, modifier = Modifier.size(24.dp)) },
+                            leadingContent = { Icon(painterResource(row.iconRes), null, modifier = Modifier.size(24.dp)) },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            modifier = Modifier.clickable { uriHandler.openUri(link.url) }
+                            modifier = Modifier.clickable { uriHandler.openUri(row.url) }
                         )
-                        
-                        if (index < communityLinks.lastIndex) {
+
+                        if (index < aboutRows.lastIndex) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(horizontal = 20.dp),
                                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
@@ -547,7 +543,7 @@ fun AboutScreen(
             Spacer(Modifier.height(32.dp))
             
             Text(
-                text = stringResource(R.string.stands_with_palestine),
+                text = "Made by $devName",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

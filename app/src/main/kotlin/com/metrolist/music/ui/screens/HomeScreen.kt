@@ -142,8 +142,8 @@ import com.metrolist.music.playback.queues.SpotifyPlaylistQueue
 import com.metrolist.music.playback.queues.SpotifyQueue
 import com.metrolist.spotify.Spotify
 import timber.log.Timber
-import com.metrolist.music.ui.component.ZunoBannerCarousel
-import com.metrolist.music.ui.component.zunoDummyBanners
+import com.metrolist.music.zuno.ZunoHomeBanners
+import com.metrolist.music.zuno.ZunoPicks
 import com.metrolist.music.ui.component.YouTubeListItem
 import com.metrolist.music.ui.component.AlbumGridItem
 import com.metrolist.music.ui.component.ArtistGridItem
@@ -1251,16 +1251,16 @@ fun HomeScreen(
                     )
                 }
 
-                // ZUNO banner (sirf main Home pe, jab koi chip select na ho)
+                // ZUNO: panel ke banners + categories (sirf main Home pe, jab koi chip select na ho)
                 if (selectedChip == null) {
                     item(key = "zuno_banner") {
-                        ZunoBannerCarousel(
-                            banners = zunoDummyBanners,
-                            onBannerClick = { banner ->
-                                navController.navigate("online_playlist/${banner.playlistId}")
-                            },
+                        ZunoHomeBanners(
+                            navController = navController,
                             modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
                         )
+                    }
+                    item(key = "zuno_picks") {
+                        ZunoPicks()
                     }
                 }
 

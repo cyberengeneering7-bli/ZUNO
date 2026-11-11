@@ -109,6 +109,13 @@ fun NavGraphBuilder.navigationBuilder(
         ListenTogetherScreen(navController, showTopBar = false)
     }
 
+    composable(Screens.Account.route) {
+        AccountDashboardScreen(
+            navController = navController,
+            latestVersionName = latestVersionName,
+        )
+    }
+
     composable(
         route = "listen_together_from_topbar",
     ) {

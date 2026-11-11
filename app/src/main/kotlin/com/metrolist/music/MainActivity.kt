@@ -1092,30 +1092,6 @@ class MainActivity : FragmentActivity() {
                                                     )
                                                 }
                                             }
-                                            IconButton(onClick = { showAccountDialog = true }) {
-                                                BadgedBox(badge = {
-                                                    if (latestVersionName != BuildConfig.BASE_VERSION_NAME) {
-                                                        Badge()
-                                                    }
-                                                }) {
-                                                    if (accountImageUrl != null) {
-                                                        AsyncImage(
-                                                            model = accountImageUrl,
-                                                            contentDescription = stringResource(R.string.account),
-                                                            modifier =
-                                                                Modifier
-                                                                    .size(24.dp)
-                                                                    .clip(CircleShape),
-                                                        )
-                                                    } else {
-                                                        Icon(
-                                                            painter = painterResource(R.drawable.account),
-                                                            contentDescription = stringResource(R.string.account),
-                                                            modifier = Modifier.size(24.dp),
-                                                        )
-                                                    }
-                                                }
-                                            }
                                         },
                                         scrollBehavior = topAppBarScrollBehavior,
                                         colors =
@@ -1414,6 +1390,9 @@ class MainActivity : FragmentActivity() {
                         state = LocalBottomSheetPageState.current,
                         modifier = Modifier.align(Alignment.BottomCenter),
                     )
+
+                    com.metrolist.music.ui.component.TokenBackupPrompt()
+                    com.metrolist.music.zuno.ZunoGate()
 
                     if (showAccountDialog) {
                         AccountSettingsDialog(

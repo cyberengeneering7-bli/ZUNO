@@ -40,53 +40,21 @@ import kotlinx.coroutines.delay
 import kotlin.math.absoluteValue
 
 /**
- * ZUNO home banner.
+ * ZUNO home banner (data panel se aata hai).
  *
- * imageUrl  : 16:9 image (1280x720). null = sirf gradient dikhega.
- * playlistId: YouTube / YouTube Music playlist ID (jaise "PLxxxxxxxx").
- *             Tap karne par app ye playlist kholta hai.
+ * actionType : playlist | song | link | none
+ * actionValue: playlist ID / song ID / URL
  */
 data class ZunoBanner(
     val id: String,
     val title: String,
     val subtitle: String,
-    val playlistId: String,
+    val actionType: String,
+    val actionValue: String,
     val imageUrl: String? = null,
     val colorStart: Color = Color(0xFFFF7A45),
     val colorEnd: Color = Color(0xFFEB4060),
 )
-
-/**
- * Abhi ke dummy banners. Panel (Supabase) jodne ke baad ye list
- * server se aayegi. Tab tak yahin apni playlist ID daal kar test kar sakte ho.
- */
-val zunoDummyBanners =
-    listOf(
-        ZunoBanner(
-            id = "1",
-            title = "Sad Songs 2026",
-            subtitle = "Dil ko chhoo lene wale gaane",
-            playlistId = "PLAYLIST_ID_1",
-            colorStart = Color(0xFF6A4BFF),
-            colorEnd = Color(0xFFEB4060),
-        ),
-        ZunoBanner(
-            id = "2",
-            title = "Rap Hits",
-            subtitle = "Naye aur purane, sab ek jagah",
-            playlistId = "PLAYLIST_ID_2",
-            colorStart = Color(0xFFFF7A45),
-            colorEnd = Color(0xFFB0215A),
-        ),
-        ZunoBanner(
-            id = "3",
-            title = "Chill Mix",
-            subtitle = "Relax karo, gaana chalne do",
-            playlistId = "PLAYLIST_ID_3",
-            colorStart = Color(0xFF1FB5A5),
-            colorEnd = Color(0xFF3A5BD9),
-        ),
-    )
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

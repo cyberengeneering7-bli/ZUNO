@@ -3485,6 +3485,9 @@ class MusicService :
 
         if (mediaId != null && hasExceededRetryLimit(mediaId)) {
             Timber.tag(TAG).w("Song $mediaId has exceeded retry limit, skipping")
+            if (isNetworkConnected.value) {
+                com.metrolist.music.zuno.ZunoPanel.reportBroken(applicationContext, mediaId, error.errorCodeName)
+            }
             markSongAsFailed(mediaId)
             handleFinalFailure()
             return
@@ -3550,6 +3553,9 @@ class MusicService :
             }
         }
 
+        if (mediaId != null && isNetworkConnected.value) {
+            com.metrolist.music.zuno.ZunoPanel.reportBroken(applicationContext, mediaId, error.errorCodeName)
+        }
         if (dataStore.get(AutoSkipNextOnErrorKey, false)) {
             Timber.tag(TAG).d("Auto-skipping to next track due to unrecoverable error")
             skipOnError()

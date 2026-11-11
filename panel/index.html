@@ -1,0 +1,676 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZUNO Panel</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23ff6b4a'/%3E%3Cpath d='M7 7h10L7 17h10' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0f1014; --s1:#171921; --s2:#1f222c; --s3:#2a2e3a; --line:#2c303c;
+  --tx:#f1f2f6; --mu:#9aa0b2; --ac:#ff6b4a; --ac2:#eb4060; --ok:#3ecf8e; --warn:#ffb020; --bad:#ff5a6a;
+  --r:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+h1,h2,h3{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--ac)}
+.muted{color:var(--mu)} .sm{font-size:13px}
+.center{min-height:100vh;display:grid;place-items:center;padding:16px}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.auth{width:100%;max-width:400px;display:grid;gap:12px}
+label{display:grid;gap:6px;font-size:13px;color:var(--mu)}
+input,select,textarea{background:var(--s2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;width:100%;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--ac)}
+input[type=checkbox]{width:auto;accent-color:var(--ac)}
+textarea{min-height:90px;resize:vertical}
+.btn{background:linear-gradient(135deg,var(--ac),var(--ac2));border:0;color:#fff;padding:10px 16px;border-radius:12px;cursor:pointer;font-weight:600}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.ghost{background:var(--s2);border:1px solid var(--line);color:var(--tx)}
+.btn.bad{background:var(--bad)} .btn.ok{background:var(--ok);color:#06241a}
+.btn.sm{padding:6px 10px;font-size:13px;border-radius:10px}
+.shell{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+.side{background:var(--s1);border-right:1px solid var(--line);padding:16px 12px;position:sticky;top:0;height:100vh;overflow:auto}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;padding:4px 8px 16px}
+.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--ac),var(--ac2));display:grid;place-items:center;font-weight:900}
+.nav button{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;padding:10px 12px;border-radius:12px;color:var(--mu);cursor:pointer;margin-bottom:2px}
+.nav button.on{background:var(--s3);color:var(--tx)}
+.nav button svg{width:20px;height:20px;flex:none}
+.nav button.on svg{color:var(--ac)}
+.ic{display:inline-block;vertical-align:-3px;flex:none}
+.nav button:hover{background:var(--s2)}
+.main{padding:22px;max-width:1100px;width:100%}
+.top{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:16px}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tools input,.tools select{width:auto;min-width:150px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+.stat{background:var(--s1);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.stat b{display:block;font-size:28px}
+.list{display:grid;gap:10px}
+.row{display:flex;gap:12px;align-items:center;background:var(--s1);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.row .grow{flex:1;min-width:0}
+.row .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.thumb{width:56px;height:56px;border-radius:12px;object-fit:cover;background:var(--s3);flex:none}
+.bthumb{width:120px;height:68px;border-radius:12px;object-fit:cover;background:linear-gradient(135deg,var(--ac),var(--ac2));flex:none}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;background:var(--s3);color:var(--mu);margin-right:4px}
+.badge.pin{background:#3b2a24;color:var(--ac)} .badge.off{background:#3a2328;color:var(--bad)} .badge.on{background:#17352a;color:var(--ok)}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:14px;z-index:50}
+.md{background:var(--s1);border:1px solid var(--line);border-radius:20px;width:100%;max-width:560px;max-height:92vh;display:flex;flex-direction:column}
+.mh{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line)}
+.mb{padding:16px 18px;overflow:auto;display:grid;gap:12px}
+.mf{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+.x{background:none;border:0;color:var(--mu);font-size:18px;cursor:pointer}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.prev{width:100%;aspect-ratio:16/9;border-radius:14px;object-fit:cover;background:linear-gradient(135deg,var(--ac),var(--ac2))}
+.chk{display:flex;gap:8px;align-items:center;color:var(--tx);font-size:14px}
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:grid;gap:8px;z-index:99}
+.t{background:var(--s3);border:1px solid var(--line);padding:10px 16px;border-radius:12px}
+.t.err{background:#3a2328;border-color:var(--bad)}
+.empty{padding:30px;text-align:center;color:var(--mu)}
+.prog{height:8px;background:var(--s3);border-radius:99px;overflow:hidden}
+.prog i{display:block;height:100%;background:linear-gradient(90deg,var(--ac),var(--ac2));width:0}
+@media(max-width:820px){
+  .shell{grid-template-columns:1fr}
+  .side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);padding:10px}
+  .brand{padding:0 6px 10px}
+  .nav{display:flex;overflow-x:auto;gap:4px}
+  .nav button{width:auto;white-space:nowrap;margin:0}
+  .main{padding:14px}
+  .two{grid-template-columns:1fr}
+  .row{flex-wrap:wrap}
+  .bthumb{width:96px;height:54px}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+"use strict";
+/* ============ Config: yahan bhi daal sakte ho, ya pehli baar screen pe poochhega ============ */
+const DEFAULT_URL = "";   // https://xxxx.supabase.co
+const DEFAULT_KEY = "";   // anon public key
+/* ================================================================================== */
+
+const CFG_KEY = "zuno_panel_cfg";
+const BUCKET = "zuno-images";
+let sb = null, me = null, tab = "dashboard";
+const A = {};                       // click actions
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ago = iso => {
+  if (!iso) return "never";
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (s < 90) return "just now";
+  if (s < 3600) return Math.round(s / 60) + " min ago";
+  if (s < 86400) return Math.round(s / 3600) + " h ago";
+  return Math.round(s / 86400) + " d ago";
+};
+const toLocalInput = iso => {
+  if (!iso) return "";
+  const d = new Date(iso); const p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+const fromLocalInput = v => v ? new Date(v).toISOString() : null;
+
+function toast(m, err) {
+  const d = document.createElement("div");
+  d.className = "t" + (err ? " err" : ""); d.textContent = m;
+  $("#toast").appendChild(d); setTimeout(() => d.remove(), 3600);
+}
+async function ok(p) { const r = await p; if (r.error) throw r.error; return r.data; }
+async function guard(fn) { try { await fn(); } catch (e) { console.error(e); toast(e.message || String(e), true); } }
+
+/* ---------- YouTube helpers ---------- */
+function ytId(s) {
+  s = (s || "").trim();
+  const m = s.match(/(?:v=|youtu\.be\/|shorts\/|embed\/|\/vi\/)([A-Za-z0-9_-]{11})/);
+  if (m) return m[1];
+  return /^[A-Za-z0-9_-]{11}$/.test(s) ? s : "";
+}
+function ytPlaylistId(s) {
+  s = (s || "").trim();
+  const m = s.match(/[?&]list=([A-Za-z0-9_-]+)/);
+  if (m) return m[1];
+  return /^(PL|RD|OLAK|VL|UU|LL)[A-Za-z0-9_-]+$/.test(s) ? s.replace(/^VL/, "") : "";
+}
+const ytThumb = id => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+async function fetchMeta(id) {
+  const u = "https://www.youtube.com/watch?v=" + id;
+  const r = await fetch("https://noembed.com/embed?url=" + encodeURIComponent(u));
+  const j = await r.json();
+  if (j.error) throw new Error(j.error);
+  return {
+    title: j.title || "",
+    artist: (j.author_name || "").replace(/\s*-\s*Topic$/i, ""),
+    cover: j.thumbnail_url || ytThumb(id)
+  };
+}
+async function uploadImage(file) {
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await sb.storage.from(BUCKET).upload(path, file, { cacheControl: "31536000", upsert: false });
+  if (error) throw error;
+  return sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+}
+
+/* ---------- Modal ---------- */
+function modal(title, html, onSave, opts = {}) {
+  const m = document.createElement("div"); m.className = "ov";
+  m.innerHTML = `<div class="md"><div class="mh"><b>${esc(title)}</b><button class="x" type="button" data-x aria-label="Close">${icon("close", 18)}</button></div>
+  <form class="mb">${html}<div class="mf"><button type="button" class="btn ghost" data-x>Cancel</button>${opts.nosave ? "" : `<button class="btn" type="submit">${opts.save || "Save"}</button>`}</div></form></div>`;
+  document.body.appendChild(m);
+  m.querySelectorAll("[data-x]").forEach(b => b.onclick = () => m.remove());
+  m.querySelector("form").onsubmit = async e => {
+    e.preventDefault();
+    const btn = e.submitter; if (btn) btn.disabled = true;
+    try { await onSave(Object.fromEntries(new FormData(e.target).entries()), e.target, m); }
+    catch (er) { console.error(er); toast(er.message || String(er), true); if (btn) btn.disabled = false; return; }
+    m.remove();
+  };
+  return m;
+}
+function confirmBox(msg) { return window.confirm(msg); }
+const chk = (f, n) => !!f.elements[n]?.checked;
+
+/* ---------- Boot / auth ---------- */
+function cfg() {
+  try { const c = JSON.parse(localStorage.getItem(CFG_KEY) || "null"); if (c) return c; } catch (e) {}
+  return DEFAULT_URL && DEFAULT_KEY ? { url: DEFAULT_URL, key: DEFAULT_KEY } : null;
+}
+function viewSetup() {
+  $("#root").innerHTML = `<div class="center"><div class="card auth"><h1>ZUNO Panel</h1>
+  <p class="muted sm">Supabase → Project Settings → API Keys se Project URL aur <b>Publishable key</b> (sb_publishable_...) yahan daalo. (Secret / service_role key kabhi mat daalna.)</p>
+  <label>Project URL<input id="su" placeholder="https://xxxx.supabase.co"></label>
+  <label>Publishable key<input id="sk" placeholder="sb_publishable_... (ya purani anon key eyJ...)"></label>
+  <button class="btn" id="sv">Connect</button></div></div>`;
+  $("#sv").onclick = () => {
+    const url = $("#su").value.trim().replace(/\/+$/, ""), key = $("#sk").value.trim();
+    if (!/^https:\/\/.+\.supabase\.co$/.test(url) || key.length < 20) return toast("URL ya key galat lag rahi hai", true);
+    localStorage.setItem(CFG_KEY, JSON.stringify({ url, key })); boot();
+  };
+}
+function viewLogin() {
+  $("#root").innerHTML = `<div class="center"><form class="card auth" id="lf"><div class="brand"><div class="logo"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6h12L6 18h12"/></svg></div>ZUNO Panel</div>
+  <label>Email<input type="email" id="le" required autocomplete="username"></label>
+  <label>Password<input type="password" id="lp" required autocomplete="current-password"></label>
+  <button class="btn">Login</button>
+  <button class="btn ghost" type="button" id="rs">Change project</button></div></form></div>`;
+  $("#rs").onclick = () => { localStorage.removeItem(CFG_KEY); viewSetup(); };
+  $("#lf").onsubmit = e => { e.preventDefault(); guard(async () => {
+    const { error } = await sb.auth.signInWithPassword({ email: $("#le").value.trim(), password: $("#lp").value });
+    if (error) throw error; boot();
+  }); };
+}
+function viewNotAdmin() {
+  $("#root").innerHTML = `<div class="center"><div class="card auth"><h2>Access nahi hai</h2>
+  <p class="muted">Ye account admin nahi hai. schema.sql ke neeche wala <code>insert into public.admins</code> query chalao.</p>
+  <button class="btn" id="lo">Logout</button></div></div>`;
+  $("#lo").onclick = async () => { await sb.auth.signOut(); boot(); };
+}
+async function boot() {
+  const c = cfg(); if (!c) return viewSetup();
+  sb = supabase.createClient(c.url, c.key, { auth: { persistSession: true, autoRefreshToken: true } });
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return viewLogin();
+  me = session.user;
+  const { data, error } = await sb.rpc("is_admin");
+  if (error || !data) return viewNotAdmin();
+  viewShell();
+}
+
+/* ---------- Shell ---------- */
+const ICONS = {
+  dashboard: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  banners: '<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/>',
+  songs: '<path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>',
+  categories: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  broken: '<path d="M10.3 3.9L2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/>',
+  announcements: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
+  servers: '<rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 6.5h.01"/><path d="M7 17.5h.01"/>',
+  settings: '<path d="M4 6h10"/><path d="M18 6h2"/><circle cx="16" cy="6" r="2"/><path d="M4 12h2"/><path d="M10 12h10"/><circle cx="8" cy="12" r="2"/><path d="M4 18h10"/><path d="M18 18h2"/><circle cx="16" cy="18" r="2"/>',
+  close: '<path d="M6 6l12 12"/><path d="M18 6L6 18"/>',
+  up: '<path d="M12 19V5"/><path d="M5 12l7-7 7 7"/>',
+  down: '<path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/>',
+  about: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/>',
+  note: '<path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4"/><path d="M9 12h6"/><path d="M9 16h6"/>'
+};
+const icon = (n, size = 20) => `<svg class="ic" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ""}</svg>`;
+const TABS = [
+  ["dashboard", "dashboard", "Dashboard"], ["banners", "banners", "Banners"], ["songs", "songs", "Songs"],
+  ["categories", "categories", "Categories"], ["broken", "broken", "Broken songs"], ["users", "users", "Users"],
+  ["announcements", "announcements", "Announcements"], ["servers", "servers", "Together servers"], ["about", "about", "About page"], ["settings", "settings", "Settings"]
+];
+function viewShell() {
+  $("#root").innerHTML = `<div class="shell"><aside class="side"><div class="brand"><div class="logo"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6h12L6 18h12"/></svg></div>ZUNO Panel</div>
+  <nav class="nav">${TABS.map(t => `<button data-t="${t[0]}">${icon(t[1])}<span>${t[2]}</span></button>`).join("")}</nav></aside>
+  <main class="main" id="main"></main></div>`;
+  document.querySelectorAll(".nav button").forEach(b => b.onclick = () => go(b.dataset.t));
+  $("#main").onclick = e => { const b = e.target.closest("[data-a]"); if (b && A[b.dataset.a]) guard(() => A[b.dataset.a](b.dataset, b)); };
+  go(tab);
+}
+function go(t) {
+  tab = t;
+  document.querySelectorAll(".nav button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
+  guard(() => VIEWS[t]());
+}
+const setMain = html => { $("#main").innerHTML = html; };
+const head = (title, tools = "") => `<div class="top"><h2>${title}</h2><div class="tools">${tools}</div></div>`;
+
+async function count(table, f) {
+  let q = sb.from(table).select("*", { count: "exact", head: true });
+  if (f) q = f(q);
+  const { count: c, error } = await q; if (error) throw error; return c || 0;
+}
+async function reorder(table, list, id, dir) {
+  const i = list.findIndex(x => x.id === id), j = i + dir;
+  if (i < 0 || j < 0 || j >= list.length) return;
+  const arr = list.slice(); [arr[i], arr[j]] = [arr[j], arr[i]];
+  await Promise.all(arr.map((x, k) => x.sort_order !== k * 10 ? ok(sb.from(table).update({ sort_order: k * 10 }).eq("id", x.id)) : null));
+}
+
+const VIEWS = {};
+
+/* ================= Dashboard ================= */
+VIEWS.dashboard = async () => {
+  setMain(head("Dashboard") + `<div class="empty">Loading…</div>`);
+  const d = n => new Date(Date.now() - n).toISOString();
+  const [total, online, day, week, newToday, blocked, songs, broken, banners, cats] = await Promise.all([
+    count("devices"), count("devices", q => q.gte("last_seen", d(5 * 60e3))), count("devices", q => q.gte("last_seen", d(864e5))),
+    count("devices", q => q.gte("last_seen", d(7 * 864e5))), count("devices", q => q.gte("first_seen", d(864e5))),
+    count("devices", q => q.eq("is_blocked", true)), count("songs", q => q.eq("is_active", true)),
+    count("songs", q => q.or("auto_hidden.eq.true,broken_count.gt.0")), count("banners", q => q.eq("is_active", true)),
+    count("categories", q => q.eq("is_active", true))
+  ]);
+  const S = (n, l) => `<div class="stat"><b>${n}</b><span class="muted">${l}</span></div>`;
+  setMain(head("Dashboard", `<button class="btn ghost sm" data-a="refresh">Refresh</button>`) +
+    `<div class="grid">${S(online, "Online now (5 min)")}${S(day, "Active 24h")}${S(week, "Active 7 days")}${S(newToday, "New today")}${S(total, "Total devices")}${S(blocked, "Blocked")}</div>
+    <h3 style="margin:22px 0 10px">Content</h3>
+    <div class="grid">${S(songs, "Live songs")}${S(broken, "Broken / reported")}${S(banners, "Active banners")}${S(cats, "Categories")}</div>
+    <p class="muted sm" style="margin-top:18px">"Active" ka matlab device ne app kholi. Ye sirf random device ID hai, koi login ya token server pe nahi aata.</p>`);
+};
+A.refresh = () => VIEWS[tab]();
+
+/* ================= Banners ================= */
+VIEWS.banners = async () => {
+  const rows = await ok(sb.from("banners").select("*").order("is_pinned", { ascending: false }).order("sort_order").order("created_at", { ascending: false }));
+  window._banners = rows;
+  setMain(head("Banners", `<button class="btn" data-a="bannerAdd">+ Add banner</button>`) +
+    `<p class="muted sm" style="margin:-6px 0 14px">Pinned banner hamesha sabse pehle dikhte hain. Image 16:9 (1280×720) rakho. Unlimited banners add kar sakte ho.</p>
+    <div class="list">${rows.length ? rows.map(b => `<div class="row">
+      ${b.image_url ? `<img class="bthumb" src="${esc(b.image_url)}" alt="">` : `<div class="bthumb"></div>`}
+      <div class="grow"><div class="t">${esc(b.title)}</div><div class="muted sm">${esc(b.subtitle)}</div>
+      <div>${b.is_pinned ? '<span class="badge pin">PINNED</span>' : ""}<span class="badge ${b.is_active ? "on" : "off"}">${b.is_active ? "visible" : "hidden"}</span><span class="badge">${esc(b.action_type)}</span>${b.starts_at || b.ends_at ? `<span class="badge">scheduled</span>` : ""}</div></div>
+      <div class="acts"><button class="btn ghost sm" data-a="bUp" data-id="${b.id}">${icon("up", 16)}</button><button class="btn ghost sm" data-a="bDown" data-id="${b.id}">${icon("down", 16)}</button>
+      <button class="btn ghost sm" data-a="bPin" data-id="${b.id}">${b.is_pinned ? "Unpin" : "Pin"}</button>
+      <button class="btn ghost sm" data-a="bToggle" data-id="${b.id}">${b.is_active ? "Hide" : "Show"}</button>
+      <button class="btn ghost sm" data-a="bEdit" data-id="${b.id}">Edit</button><button class="btn bad sm" data-a="bDel" data-id="${b.id}">Delete</button></div></div>`).join("") : `<div class="empty">Abhi koi banner nahi. "+ Add banner" dabao.</div>`}</div>`);
+};
+function bannerForm(b = {}) {
+  return `<img class="prev" id="bp" src="${esc(b.image_url || "")}" alt="" onerror="this.removeAttribute('src')">
+  <label>Title<input name="title" required maxlength="60" value="${esc(b.title)}"></label>
+  <label>Subtitle<input name="subtitle" maxlength="90" value="${esc(b.subtitle)}"></label>
+  <label>Image URL (ya neeche upload karo)<input name="image_url" id="bi" value="${esc(b.image_url)}" placeholder="https://..."></label>
+  <label>Upload image<input type="file" id="bf" accept="image/*"></label>
+  <div class="two"><label>Tap par kya ho<select name="action_type" id="bat">
+    ${["playlist", "song", "link", "none"].map(x => `<option ${b.action_type === x ? "selected" : ""}>${x}</option>`).join("")}</select></label>
+  <label>Value<input name="action_value" id="bav" value="${esc(b.action_value)}" placeholder="YouTube playlist/song URL ya link"></label></div>
+  <p class="muted sm" id="bah" style="margin:-4px 0 0">playlist = YouTube playlist link · song = YouTube song link · link = koi bhi website · none = sirf dikhana</p>
+  <div class="two"><label>Start (optional)<input type="datetime-local" name="starts_at" value="${toLocalInput(b.starts_at)}"></label>
+  <label>End (optional)<input type="datetime-local" name="ends_at" value="${toLocalInput(b.ends_at)}"></label></div>
+  <label>Order number (chhota = pehle)<input type="number" name="sort_order" value="${b.sort_order ?? 0}"></label>
+  <label class="chk"><input type="checkbox" name="is_pinned" ${b.is_pinned ? "checked" : ""}> Pinned (sabse upar)</label>
+  <label class="chk"><input type="checkbox" name="is_active" ${b.is_active === false ? "" : "checked"}> Visible</label>`;
+}
+function bannerWire(m) {
+  const url = m.querySelector("#bi"), pv = m.querySelector("#bp");
+  url.oninput = () => { pv.src = url.value; };
+  m.querySelector("#bf").onchange = e => guard(async () => {
+    const f = e.target.files[0]; if (!f) return;
+    toast("Uploading…"); url.value = await uploadImage(f); pv.src = url.value; toast("Uploaded");
+  });
+}
+function bannerPayload(v, f) {
+  let val = (v.action_value || "").trim();
+  if (v.action_type === "playlist") { val = ytPlaylistId(val); if (!val) throw new Error("Playlist link/ID sahi nahi hai"); }
+  if (v.action_type === "song") { val = ytId(val); if (!val) throw new Error("Song link/ID sahi nahi hai"); }
+  if (v.action_type === "link" && !/^https?:\/\//.test(val)) throw new Error("Link https:// se shuru hona chahiye");
+  if (v.action_type === "none") val = "";
+  return { title: v.title.trim(), subtitle: (v.subtitle || "").trim(), image_url: (v.image_url || "").trim() || null,
+    action_type: v.action_type, action_value: val, starts_at: fromLocalInput(v.starts_at), ends_at: fromLocalInput(v.ends_at),
+    sort_order: parseInt(v.sort_order || 0, 10) || 0, is_pinned: chk(f, "is_pinned"), is_active: chk(f, "is_active") };
+}
+A.bannerAdd = () => { const m = modal("New banner", bannerForm(), async (v, f) => { await ok(sb.from("banners").insert(bannerPayload(v, f))); toast("Banner added"); VIEWS.banners(); }); bannerWire(m); };
+A.bEdit = d => { const b = window._banners.find(x => x.id === d.id); const m = modal("Edit banner", bannerForm(b), async (v, f) => { await ok(sb.from("banners").update(bannerPayload(v, f)).eq("id", b.id)); toast("Saved"); VIEWS.banners(); }); bannerWire(m); };
+A.bDel = async d => { if (confirmBox("Ye banner delete karna hai?")) { await ok(sb.from("banners").delete().eq("id", d.id)); toast("Deleted"); VIEWS.banners(); } };
+A.bPin = async d => { const b = window._banners.find(x => x.id === d.id); await ok(sb.from("banners").update({ is_pinned: !b.is_pinned }).eq("id", d.id)); VIEWS.banners(); };
+A.bToggle = async d => { const b = window._banners.find(x => x.id === d.id); await ok(sb.from("banners").update({ is_active: !b.is_active }).eq("id", d.id)); VIEWS.banners(); };
+A.bUp = async d => { await reorder("banners", window._banners, d.id, -1); VIEWS.banners(); };
+A.bDown = async d => { await reorder("banners", window._banners, d.id, 1); VIEWS.banners(); };
+
+/* ================= Categories ================= */
+VIEWS.categories = async () => {
+  const [rows, songs] = await Promise.all([ok(sb.from("categories").select("*").order("sort_order").order("created_at")), ok(sb.from("songs").select("category_id"))]);
+  const cnt = {}; songs.forEach(s => { if (s.category_id) cnt[s.category_id] = (cnt[s.category_id] || 0) + 1; });
+  window._cats = rows;
+  setMain(head("Categories", `<button class="btn" data-a="catAdd">+ Add category</button>`) +
+    `<p class="muted sm" style="margin:-6px 0 14px">Har category app ke Home pe ek section banti hai (jaise "Sad 2026"). Order yahan se tay hota hai.</p>
+    <div class="list">${rows.length ? rows.map(c => `<div class="row"><div class="grow"><div class="t">${esc(c.name)}</div>
+      <div><span class="badge">${cnt[c.id] || 0} songs</span><span class="badge ${c.is_active ? "on" : "off"}">${c.is_active ? "active" : "off"}</span><span class="badge">${c.show_on_home ? "on Home" : "not on Home"}</span></div></div>
+      <div class="acts"><button class="btn ghost sm" data-a="cUp" data-id="${c.id}">${icon("up", 16)}</button><button class="btn ghost sm" data-a="cDown" data-id="${c.id}">${icon("down", 16)}</button>
+      <button class="btn ghost sm" data-a="catEdit" data-id="${c.id}">Edit</button><button class="btn bad sm" data-a="catDel" data-id="${c.id}">Delete</button></div></div>`).join("") : `<div class="empty">Pehle ek category banao (jaise Sad, Rap, Romance).</div>`}</div>`);
+};
+function catForm(c = {}) {
+  return `<label>Name<input name="name" required maxlength="40" value="${esc(c.name)}"></label>
+  <label>Order number<input type="number" name="sort_order" value="${c.sort_order ?? 0}"></label>
+  <label class="chk"><input type="checkbox" name="show_on_home" ${c.show_on_home === false ? "" : "checked"}> Home pe section dikhao</label>
+  <label class="chk"><input type="checkbox" name="is_active" ${c.is_active === false ? "" : "checked"}> Active</label>`;
+}
+const catPayload = (v, f) => ({ name: v.name.trim(), sort_order: parseInt(v.sort_order || 0, 10) || 0, show_on_home: chk(f, "show_on_home"), is_active: chk(f, "is_active") });
+A.catAdd = () => modal("New category", catForm({ sort_order: (window._cats?.length || 0) * 10 }), async (v, f) => { await ok(sb.from("categories").insert(catPayload(v, f))); VIEWS.categories(); });
+A.catEdit = d => { const c = window._cats.find(x => x.id === d.id); modal("Edit category", catForm(c), async (v, f) => { await ok(sb.from("categories").update(catPayload(v, f)).eq("id", c.id)); VIEWS.categories(); }); };
+A.catDel = async d => { if (confirmBox("Category delete? Songs delete nahi honge, bas category khali ho jayegi.")) { await ok(sb.from("categories").delete().eq("id", d.id)); VIEWS.categories(); } };
+A.cUp = async d => { await reorder("categories", window._cats, d.id, -1); VIEWS.categories(); };
+A.cDown = async d => { await reorder("categories", window._cats, d.id, 1); VIEWS.categories(); };
+
+/* ================= Songs ================= */
+let songFilter = { q: "", cat: "" };
+const sel = new Set();
+VIEWS.songs = async () => {
+  const [songs, cats] = await Promise.all([
+    ok(sb.from("songs").select("*").order("created_at", { ascending: false }).limit(1000)),
+    ok(sb.from("categories").select("id,name").order("sort_order"))
+  ]);
+  window._songs = songs; window._cats = cats; sel.clear();
+  setMain(head("Songs", `<button class="btn" data-a="songAdd">+ Add song</button><button class="btn ghost" data-a="songBulk">Bulk add</button><button class="btn ghost" data-a="songCheck">Check links</button>`) +
+    `<div class="tools" style="margin-bottom:12px"><input id="sq" placeholder="Search title / artist / tag" value="${esc(songFilter.q)}">
+    <select id="sc"><option value="">All categories</option><option value="_none">No category</option>${cats.map(c => `<option value="${c.id}" ${songFilter.cat === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>
+    <button class="btn ghost sm" data-a="selDel">Delete selected</button><button class="btn ghost sm" data-a="selHide">Hide selected</button><button class="btn ghost sm" data-a="selShow">Show selected</button><button class="btn ghost sm" data-a="selMove">Move selected</button></div>
+    <div id="slist" class="list"></div>`);
+  $("#sq").oninput = e => { songFilter.q = e.target.value; drawSongs(); };
+  $("#sc").onchange = e => { songFilter.cat = e.target.value; drawSongs(); };
+  drawSongs();
+};
+function drawSongs() {
+  const cats = Object.fromEntries(window._cats.map(c => [c.id, c.name]));
+  const q = songFilter.q.toLowerCase();
+  const rows = window._songs.filter(s => {
+    if (songFilter.cat === "_none" ? s.category_id : songFilter.cat && s.category_id !== songFilter.cat) return false;
+    return !q || (s.title + " " + s.artist + " " + (s.tags || []).join(" ")).toLowerCase().includes(q);
+  });
+  $("#slist").innerHTML = rows.length ? rows.slice(0, 300).map(s => `<div class="row">
+    <input type="checkbox" data-a="selOne" data-id="${s.id}" ${sel.has(s.id) ? "checked" : ""}>
+    <img class="thumb" src="${esc(s.cover_url || ytThumb(s.video_id))}" alt="" loading="lazy">
+    <div class="grow"><div class="t">${esc(s.title)}</div><div class="muted sm">${esc(s.artist)} · ${esc(cats[s.category_id] || "no category")}</div>
+    <div>${s.is_active ? '<span class="badge on">live</span>' : '<span class="badge off">hidden</span>'}${s.auto_hidden ? '<span class="badge off">auto-hidden</span>' : ""}${(s.tags || []).map(t => `<span class="badge">#${esc(t)}</span>`).join("")}</div></div>
+    <div class="acts"><button class="btn ghost sm" data-a="songEdit" data-id="${s.id}">Edit</button><button class="btn bad sm" data-a="songDel" data-id="${s.id}">Delete</button></div></div>`).join("")
+    + (rows.length > 300 ? `<div class="empty">Pehle 300 dikh rahe hain. Search use karo.</div>` : "")
+    : `<div class="empty">Koi song nahi mila.</div>`;
+}
+A.selOne = (d, el) => { el.checked ? sel.add(d.id) : sel.delete(d.id); };
+const needSel = () => { if (!sel.size) { toast("Pehle kuch songs select karo", true); return false; } return true; };
+A.selDel = async () => { if (needSel() && confirmBox(`${sel.size} songs delete karne hain?`)) { await ok(sb.from("songs").delete().in("id", [...sel])); toast("Deleted"); VIEWS.songs(); } };
+A.selHide = async () => { if (needSel()) { await ok(sb.from("songs").update({ is_active: false }).in("id", [...sel])); VIEWS.songs(); } };
+A.selShow = async () => { if (needSel()) { await ok(sb.from("songs").update({ is_active: true, auto_hidden: false }).in("id", [...sel])); VIEWS.songs(); } };
+A.selMove = () => {
+  if (!needSel()) return;
+  modal("Move to category", `<label>Category<select name="cat"><option value="">(none)</option>${window._cats.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></label>`,
+    async v => { await ok(sb.from("songs").update({ category_id: v.cat || null }).in("id", [...sel])); VIEWS.songs(); });
+};
+function songForm(s = {}) {
+  return `<label>YouTube song link (ya video ID)<div style="display:flex;gap:8px"><input name="url" id="su2" value="${s.video_id ? "https://www.youtube.com/watch?v=" + esc(s.video_id) : ""}" placeholder="https://youtu.be/..." required>
+    <button type="button" class="btn ghost sm" id="fm">Auto-fill</button></div></label>
+  <img class="prev" id="sp" style="aspect-ratio:1;max-width:160px" src="${esc(s.cover_url || "")}" alt="" onerror="this.removeAttribute('src')">
+  <div class="two"><label>Song name<input name="title" id="st" required maxlength="140" value="${esc(s.title)}"></label>
+  <label>Artist<input name="artist" id="sa" maxlength="100" value="${esc(s.artist)}"></label></div>
+  <label>Cover (DP) URL<input name="cover_url" id="sc2" value="${esc(s.cover_url)}" placeholder="auto-fill se aa jayega"></label>
+  <label>Ya apni DP upload karo<input type="file" id="sf" accept="image/*"></label>
+  <div class="two"><label>Category<select name="category_id"><option value="">(none)</option>${window._cats.map(c => `<option value="${c.id}" ${s.category_id === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label>
+  <label>Order number<input type="number" name="sort_order" value="${s.sort_order ?? 0}"></label></div>
+  <label>Tags (comma se alag: sad, 2026, arijit)<input name="tags" value="${esc((s.tags || []).join(", "))}"></label>
+  <label class="chk"><input type="checkbox" name="is_active" ${s.is_active === false ? "" : "checked"}> Live (app mein dikhe)</label>`;
+}
+function songWire(m) {
+  const url = m.querySelector("#su2"), pv = m.querySelector("#sp"), cov = m.querySelector("#sc2");
+  cov.oninput = () => { pv.src = cov.value; };
+  m.querySelector("#fm").onclick = () => guard(async () => {
+    const id = ytId(url.value); if (!id) throw new Error("YouTube link sahi nahi hai");
+    cov.value = ytThumb(id); pv.src = cov.value;
+    try { const x = await fetchMeta(id); m.querySelector("#st").value = x.title; m.querySelector("#sa").value = x.artist; cov.value = x.cover || ytThumb(id); pv.src = cov.value; toast("Details bhar di"); }
+    catch (e) { toast("Auto-fill nahi hua (video private ho sakta hai). Naam khud likho.", true); }
+  });
+  m.querySelector("#sf").onchange = e => guard(async () => { const f = e.target.files[0]; if (!f) return; toast("Uploading…"); cov.value = await uploadImage(f); pv.src = cov.value; toast("Uploaded"); });
+}
+const tagsOf = s => (s || "").split(",").map(x => x.trim().toLowerCase()).filter(Boolean).slice(0, 12);
+function songPayload(v, f) {
+  const id = ytId(v.url); if (!id) throw new Error("YouTube link sahi nahi hai");
+  return { video_id: id, title: v.title.trim(), artist: (v.artist || "").trim(), cover_url: (v.cover_url || "").trim() || ytThumb(id),
+    category_id: v.category_id || null, tags: tagsOf(v.tags), sort_order: parseInt(v.sort_order || 0, 10) || 0, is_active: chk(f, "is_active"),
+    auto_hidden: chk(f, "is_active") ? false : undefined };
+}
+A.songAdd = () => { const m = modal("New song", songForm(), async (v, f) => { const p = songPayload(v, f); if (p.auto_hidden === undefined) delete p.auto_hidden; await ok(sb.from("songs").upsert(p, { onConflict: "video_id" })); toast("Song saved"); VIEWS.songs(); }); songWire(m); };
+A.songEdit = d => { const s = window._songs.find(x => x.id === d.id); const m = modal("Edit song", songForm(s), async (v, f) => { const p = songPayload(v, f); if (p.auto_hidden === undefined) delete p.auto_hidden; await ok(sb.from("songs").update(p).eq("id", s.id)); toast("Saved"); VIEWS.songs(); }); songWire(m); };
+A.songDel = async d => { if (confirmBox("Song delete karna hai?")) { await ok(sb.from("songs").delete().eq("id", d.id)); toast("Deleted"); VIEWS.songs(); } };
+A.songBulk = () => {
+  modal("Bulk add songs", `<label>Har line mein ek YouTube link<textarea name="urls" required placeholder="https://youtu.be/...\nhttps://music.youtube.com/watch?v=..."></textarea></label>
+  <label>Category<select name="cat"><option value="">(none)</option>${window._cats.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></label>
+  <div class="prog"><i id="pb"></i></div><div class="muted sm" id="pt">Naam, artist aur DP apne aap bhar jayenge.</div>`,
+    async v => {
+      const ids = [...new Set(v.urls.split(/\s+/).map(ytId).filter(Boolean))];
+      if (!ids.length) throw new Error("Koi sahi link nahi mila");
+      let done = 0, fail = 0;
+      for (const id of ids) {
+        let t = id, a = "", c = ytThumb(id);
+        try { const x = await fetchMeta(id); t = x.title || id; a = x.artist; c = x.cover || c; } catch (e) { fail++; }
+        await ok(sb.from("songs").upsert({ video_id: id, title: t, artist: a, cover_url: c, category_id: v.cat || null, is_active: true }, { onConflict: "video_id" }));
+        done++; $("#pb").style.width = Math.round(done / ids.length * 100) + "%"; $("#pt").textContent = `${done}/${ids.length}`;
+      }
+      toast(`${done} songs add hue` + (fail ? ` (${fail} ka naam khud theek karo)` : "")); VIEWS.songs();
+    }, { save: "Add all" });
+};
+A.songCheck = () => {
+  const m = modal("Check all links", `<p class="muted sm">Har song ka YouTube link test hoga. Jo chalne layak nahi, unki list banegi.</p>
+    <button type="button" class="btn" id="go">Start check</button><div class="prog"><i id="pb"></i></div><div class="muted sm" id="pt"></div><div id="cr"></div>`, async () => {}, { nosave: true });
+  m.querySelector("#go").onclick = e => guard(async () => {
+    e.target.disabled = true;
+    const list = window._songs; const bad = []; let i = 0, unknown = 0;
+    const work = async () => {
+      while (i < list.length) {
+        const s = list[i++];
+        try { await fetchMeta(s.video_id); } catch (er) { if (er instanceof TypeError) unknown++; else bad.push(s); }
+        m.querySelector("#pb").style.width = Math.round(i / list.length * 100) + "%";
+        m.querySelector("#pt").textContent = `${i}/${list.length} checked`;
+      }
+    };
+    await Promise.all([work(), work(), work(), work()]);
+    m.querySelector("#pt").textContent = `Done. ${bad.length} broken` + (unknown ? `, ${unknown} check nahi ho paye` : "");
+    const ids = bad.map(x => x.id);
+    m.querySelector("#cr").innerHTML = bad.length ? `<div class="list" style="margin:10px 0">${bad.map(x => `<div class="row"><div class="grow t">${esc(x.title)}</div></div>`).join("")}</div>
+      <div class="mf"><button type="button" class="btn ghost" id="bh">Hide all</button><button type="button" class="btn bad" id="bd">Delete all</button></div>` : "";
+    if (bad.length) {
+      m.querySelector("#bh").onclick = () => guard(async () => { await ok(sb.from("songs").update({ is_active: false }).in("id", ids)); m.remove(); VIEWS.songs(); });
+      m.querySelector("#bd").onclick = () => guard(async () => { if (confirmBox("Sab delete?")) { await ok(sb.from("songs").delete().in("id", ids)); m.remove(); VIEWS.songs(); } });
+    }
+  });
+};
+
+/* ================= Broken songs ================= */
+VIEWS.broken = async () => {
+  const rows = await ok(sb.from("songs").select("*").or("auto_hidden.eq.true,broken_count.gt.0").order("last_error_at", { ascending: false, nullsFirst: false }));
+  window._songs = rows; sel.clear();
+  setMain(head("Broken songs", `<button class="btn ghost sm" data-a="brRestore">Restore selected</button><button class="btn bad sm" data-a="selDelB">Delete selected</button>`) +
+    `<p class="muted sm" style="margin:-6px 0 14px">App mein jo gaana chalne mein fail hota hai, wo yahan aata hai. Alag-alag 3 devices (Settings mein badal sakte ho) se error aaye toh gaana apne aap chhup jata hai. Yahan se ek baar mein delete ya restore karo.</p>
+    <div class="list">${rows.length ? rows.map(s => `<div class="row"><input type="checkbox" data-a="selOne" data-id="${s.id}">
+      <img class="thumb" src="${esc(s.cover_url || ytThumb(s.video_id))}" alt="" loading="lazy"><div class="grow"><div class="t">${esc(s.title)}</div>
+      <div class="muted sm">${esc(s.artist)} · last error ${ago(s.last_error_at)}</div><div><span class="badge off">${s.broken_count} devices</span>${s.auto_hidden ? '<span class="badge off">auto-hidden</span>' : ""}</div></div>
+      <div class="acts"><button class="btn ghost sm" data-a="brOne" data-id="${s.id}">Restore</button><button class="btn bad sm" data-a="songDelB" data-id="${s.id}">Delete</button></div></div>`).join("") : `<div class="empty">Koi broken song nahi</div>`}</div>`);
+};
+async function restoreIds(ids) {
+  const vids = window._songs.filter(s => ids.includes(s.id)).map(s => s.video_id);
+  await ok(sb.from("songs").update({ is_active: true, auto_hidden: false, broken_count: 0 }).in("id", ids));
+  if (vids.length) await ok(sb.from("song_reports").delete().in("video_id", vids));
+}
+A.brOne = async d => { await restoreIds([d.id]); toast("Restored"); VIEWS.broken(); };
+A.brRestore = async () => { if (needSel()) { await restoreIds([...sel]); toast("Restored"); VIEWS.broken(); } };
+A.selDelB = async () => { if (needSel() && confirmBox(`${sel.size} songs delete?`)) { await ok(sb.from("songs").delete().in("id", [...sel])); VIEWS.broken(); } };
+A.songDelB = async d => { if (confirmBox("Delete?")) { await ok(sb.from("songs").delete().eq("id", d.id)); VIEWS.broken(); } };
+
+/* ================= Users (devices) ================= */
+let userQ = "";
+VIEWS.users = async () => {
+  const rows = await ok(sb.from("devices").select("*").order("last_seen", { ascending: false }).limit(300));
+  window._users = rows;
+  setMain(head("Users", `<input id="uq" placeholder="Search model / ID / note" value="${esc(userQ)}">`) +
+    `<p class="muted sm" style="margin:-6px 0 14px">Block karne par us device pe app khulte hi "blocked" message aayega. (Koi app uninstall karke naya ID bana sakta hai, isliye ye dosto ke liye kaafi hai.)</p><div id="ulist" class="list"></div>`);
+  $("#uq").oninput = e => { userQ = e.target.value; drawUsers(); };
+  drawUsers();
+};
+function drawUsers() {
+  const q = userQ.toLowerCase();
+  const rows = window._users.filter(u => !q || (u.device_id + " " + (u.model || "") + " " + (u.note || "")).toLowerCase().includes(q));
+  $("#ulist").innerHTML = rows.length ? rows.map(u => {
+    const on = Date.now() - new Date(u.last_seen).getTime() < 5 * 60e3;
+    return `<div class="row"><div class="grow"><div class="t">${esc(u.model || "Unknown phone")} <span class="muted sm">· v${esc(u.app_version || "?")}</span></div>
+    <div class="muted sm">${esc(u.device_id.slice(0, 8))}… · last seen ${ago(u.last_seen)} · joined ${ago(u.first_seen)}${u.note ? " · " + icon("note", 14) + " " + esc(u.note) : ""}</div>
+    <div>${on ? '<span class="badge on">online</span>' : ""}${u.is_blocked ? '<span class="badge off">blocked</span>' : ""}</div></div>
+    <div class="acts"><button class="btn ghost sm" data-a="uNote" data-id="${esc(u.device_id)}">Note</button>
+    ${u.is_blocked ? `<button class="btn ok sm" data-a="uUnblock" data-id="${esc(u.device_id)}">Unblock</button>` : `<button class="btn bad sm" data-a="uBlock" data-id="${esc(u.device_id)}">Block</button>`}</div></div>`;
+  }).join("") : `<div class="empty">Abhi koi device nahi. App khologe toh yahan aa jayega.</div>`;
+}
+A.uBlock = d => modal("Block device", `<label>Reason (user ko dikhega)<input name="r" maxlength="120" placeholder="Access removed"></label>`,
+  async v => { await ok(sb.from("devices").update({ is_blocked: true, block_reason: v.r || "Access removed" }).eq("device_id", d.id)); VIEWS.users(); }, { save: "Block" });
+A.uUnblock = async d => { await ok(sb.from("devices").update({ is_blocked: false, block_reason: null }).eq("device_id", d.id)); VIEWS.users(); };
+A.uNote = d => { const u = window._users.find(x => x.device_id === d.id); modal("Note", `<label>Note (sirf tumhe dikhega)<input name="n" maxlength="120" value="${esc(u.note)}"></label>`,
+  async v => { await ok(sb.from("devices").update({ note: v.n || null }).eq("device_id", d.id)); VIEWS.users(); }); };
+
+/* ================= Announcements ================= */
+VIEWS.announcements = async () => {
+  const rows = await ok(sb.from("announcements").select("*").order("created_at", { ascending: false }));
+  window._ann = rows;
+  setMain(head("Announcements", `<button class="btn" data-a="annAdd">+ New announcement</button>`) +
+    `<p class="muted sm" style="margin:-6px 0 14px">App khulne par popup dikhta hai. Sabse naya active wala dikhega.</p>
+    <div class="list">${rows.length ? rows.map(a => `<div class="row"><div class="grow"><div class="t">${esc(a.title)}</div><div class="muted sm">${esc(a.body).slice(0, 120)}</div>
+      <div><span class="badge ${a.is_active ? "on" : "off"}">${a.is_active ? "active" : "off"}</span><span class="badge">${a.show_once ? "once" : "every time"}</span>${a.expires_at ? `<span class="badge">till ${new Date(a.expires_at).toLocaleDateString()}</span>` : ""}</div></div>
+      <div class="acts"><button class="btn ghost sm" data-a="annToggle" data-id="${a.id}">${a.is_active ? "Turn off" : "Turn on"}</button><button class="btn ghost sm" data-a="annEdit" data-id="${a.id}">Edit</button><button class="btn bad sm" data-a="annDel" data-id="${a.id}">Delete</button></div></div>`).join("") : `<div class="empty">Koi announcement nahi.</div>`}</div>`);
+};
+function annForm(a = {}) {
+  return `<label>Title<input name="title" required maxlength="80" value="${esc(a.title)}"></label>
+  <label>Message<textarea name="body" maxlength="500">${esc(a.body)}</textarea></label>
+  <label>Link (optional)<input name="link_url" value="${esc(a.link_url)}" placeholder="https://..."></label>
+  <label>Expiry (optional)<input type="datetime-local" name="expires_at" value="${toLocalInput(a.expires_at)}"></label>
+  <label class="chk"><input type="checkbox" name="show_once" ${a.show_once === false ? "" : "checked"}> Ek baar hi dikhao</label>
+  <label class="chk"><input type="checkbox" name="is_active" ${a.is_active === false ? "" : "checked"}> Active</label>`;
+}
+const annPayload = (v, f) => ({ title: v.title.trim(), body: (v.body || "").trim(), link_url: (v.link_url || "").trim() || null, expires_at: fromLocalInput(v.expires_at), show_once: chk(f, "show_once"), is_active: chk(f, "is_active") });
+A.annAdd = () => modal("New announcement", annForm(), async (v, f) => { await ok(sb.from("announcements").insert(annPayload(v, f))); VIEWS.announcements(); });
+A.annEdit = d => { const a = window._ann.find(x => x.id === d.id); modal("Edit announcement", annForm(a), async (v, f) => { await ok(sb.from("announcements").update(annPayload(v, f)).eq("id", a.id)); VIEWS.announcements(); }); };
+A.annToggle = async d => { const a = window._ann.find(x => x.id === d.id); await ok(sb.from("announcements").update({ is_active: !a.is_active }).eq("id", d.id)); VIEWS.announcements(); };
+A.annDel = async d => { if (confirmBox("Delete?")) { await ok(sb.from("announcements").delete().eq("id", d.id)); VIEWS.announcements(); } };
+
+/* ================= Together servers ================= */
+VIEWS.servers = async () => {
+  const rows = await ok(sb.from("together_servers").select("*").order("priority").order("created_at"));
+  window._srv = rows;
+  setMain(head("Together servers", `<button class="btn" data-a="srvAdd">+ Add server</button>`) +
+    `<p class="muted sm" style="margin:-6px 0 14px">Listen Together ke servers. Number chhota = pehle try hoga. Ek band ho toh app agla try karega, aur yahan naya URL daalne se sabke app mein badal jayega.<br>
+    <b>Note:</b> app ka ye hissa abhi jodna baaki hai; ye list pehle se tayyar rakhi hai.</p>
+    <div class="list">${rows.length ? rows.map(s => `<div class="row"><div class="grow"><div class="t">${esc(s.name)}</div><div class="muted sm">${esc(s.url)}</div>
+      <div><span class="badge ${s.is_active ? "on" : "off"}">${s.is_active ? "active" : "off"}</span><span class="badge">priority ${s.priority}</span></div></div>
+      <div class="acts"><button class="btn ghost sm" data-a="srvTest" data-id="${s.id}">Test</button><button class="btn ghost sm" data-a="srvEdit" data-id="${s.id}">Edit</button><button class="btn bad sm" data-a="srvDel" data-id="${s.id}">Delete</button></div></div>`).join("") : `<div class="empty">Koi server nahi.</div>`}</div>`);
+};
+const srvForm = s => `<label>Name<input name="name" required maxlength="40" value="${esc(s?.name)}" placeholder="My Render server"></label>
+  <label>WebSocket URL<input name="url" required value="${esc(s?.url)}" placeholder="wss://zuno-together.onrender.com/ws"></label>
+  <label>Priority (chhota = pehle)<input type="number" name="priority" value="${s?.priority ?? 0}"></label>
+  <label class="chk"><input type="checkbox" name="is_active" ${s?.is_active === false ? "" : "checked"}> Active</label>`;
+const srvPayload = (v, f) => { if (!/^wss?:\/\//.test(v.url.trim())) throw new Error("URL wss:// se shuru hona chahiye"); return { name: v.name.trim(), url: v.url.trim(), priority: parseInt(v.priority || 0, 10) || 0, is_active: chk(f, "is_active") }; };
+A.srvAdd = () => modal("New server", srvForm(), async (v, f) => { await ok(sb.from("together_servers").insert(srvPayload(v, f))); VIEWS.servers(); });
+A.srvEdit = d => { const s = window._srv.find(x => x.id === d.id); modal("Edit server", srvForm(s), async (v, f) => { await ok(sb.from("together_servers").update(srvPayload(v, f)).eq("id", s.id)); VIEWS.servers(); }); };
+A.srvDel = async d => { if (confirmBox("Delete?")) { await ok(sb.from("together_servers").delete().eq("id", d.id)); VIEWS.servers(); } };
+A.srvTest = d => {
+  const s = window._srv.find(x => x.id === d.id); toast("Testing…");
+  let done = false; const ws = new WebSocket(s.url);
+  const end = (m, e) => { if (!done) { done = true; toast(m, e); try { ws.close(); } catch (x) {} } };
+  ws.onopen = () => end("Server connect ho gaya"); ws.onerror = () => end("Connect nahi hua", true); setTimeout(() => end("Timeout (free server so raha ho sakta hai)", true), 20000);
+};
+
+/* ================= About page ================= */
+const ABOUT_ICONS = ["github", "instagram", "telegram", "discord", "website", "link", "info"];
+VIEWS.about = async () => {
+  const [rows, cfgRows] = await Promise.all([
+    ok(sb.from("about_links").select("*").order("sort_order").order("created_at")),
+    ok(sb.from("app_config").select("*").eq("key", "about"))
+  ]);
+  window._about = rows;
+  const info = cfgRows[0]?.value || {};
+  setMain(head("About page", `<button class="btn" data-a="alAdd">+ Add link</button>`) +
+    `<form class="card" id="fa" style="display:grid;gap:10px;margin-bottom:18px"><h3>Developer</h3>
+      <p class="muted sm" style="margin:0">Khali chhodoge toh app ka default naam aur photo dikhega.</p>
+      <img class="prev" id="ap" style="aspect-ratio:1;max-width:140px;border-radius:50%" src="${esc(info.photo_url || "")}" alt="" onerror="this.removeAttribute('src')">
+      <label>Name<input name="name" maxlength="60" value="${esc(info.name)}"></label>
+      <label>Photo URL (https://...)<input name="photo_url" id="apu" value="${esc(info.photo_url)}"></label>
+      <label>Ya photo upload karo<input type="file" id="apf" accept="image/*"></label>
+      <div><button class="btn">Save developer</button></div></form>
+    <h3 style="margin:6px 0 4px">Links</h3>
+    <p class="muted sm" style="margin:0 0 12px">Yahan jo links daaloge wo app ke About page pe dikhenge (sirf URL daalo aur Save). Sabse neeche GPL license ka link hamesha rahega.</p>
+    <div class="list">${rows.length ? rows.map(l => `<div class="row"><div class="grow"><div class="t">${esc(l.label)}</div><div class="muted sm" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.url)}</div>
+      <div><span class="badge">${esc(l.icon)}</span><span class="badge ${l.is_active ? "on" : "off"}">${l.is_active ? "visible" : "hidden"}</span></div></div>
+      <div class="acts"><button class="btn ghost sm" data-a="alUp" data-id="${l.id}">${icon("up", 16)}</button><button class="btn ghost sm" data-a="alDown" data-id="${l.id}">${icon("down", 16)}</button>
+      <button class="btn ghost sm" data-a="alToggle" data-id="${l.id}">${l.is_active ? "Hide" : "Show"}</button><button class="btn ghost sm" data-a="alEdit" data-id="${l.id}">Edit</button><button class="btn bad sm" data-a="alDel" data-id="${l.id}">Delete</button></div></div>`).join("")
+      : `<div class="empty">Abhi koi link nahi. App mein default GitHub link dikhta hai. "+ Add link" dabao.</div>`}</div>`);
+  const pu = $("#apu"), pv = $("#ap");
+  pu.oninput = () => { pv.src = pu.value; };
+  $("#apf").onchange = e => guard(async () => { const f = e.target.files[0]; if (!f) return; toast("Uploading..."); pu.value = await uploadImage(f); pv.src = pu.value; toast("Uploaded"); });
+  $("#fa").onsubmit = e => { e.preventDefault(); guard(async () => {
+    const f = e.target; const photo = f.elements.photo_url.value.trim();
+    if (photo && !/^https:\/\//.test(photo)) throw new Error("Photo URL https:// se shuru hona chahiye");
+    await ok(sb.from("app_config").upsert({ key: "about", value: { name: f.elements.name.value.trim(), photo_url: photo } }));
+    toast("Saved");
+  }); };
+};
+function alForm(l = {}) {
+  return `<label>Name (app mein dikhega)<input name="label" required maxlength="40" value="${esc(l.label)}" placeholder="Instagram"></label>
+  <label>URL<input name="url" required value="${esc(l.url)}" placeholder="https://instagram.com/yourname"></label>
+  <label>Icon<select name="icon">${ABOUT_ICONS.map(x => `<option ${l.icon === x ? "selected" : ""}>${x}</option>`).join("")}</select></label>
+  <label>Order number (chhota = pehle)<input type="number" name="sort_order" value="${l.sort_order ?? (window._about?.length || 0) * 10}"></label>
+  <label class="chk"><input type="checkbox" name="is_active" ${l.is_active === false ? "" : "checked"}> Visible</label>`;
+}
+function alPayload(v, f) {
+  const url = v.url.trim();
+  if (!/^https?:\/\//.test(url)) throw new Error("URL https:// se shuru hona chahiye");
+  return { label: v.label.trim(), url, icon: v.icon, sort_order: parseInt(v.sort_order || 0, 10) || 0, is_active: chk(f, "is_active") };
+}
+A.alAdd = () => modal("New link", alForm(), async (v, f) => { await ok(sb.from("about_links").insert(alPayload(v, f))); VIEWS.about(); });
+A.alEdit = d => { const l = window._about.find(x => x.id === d.id); modal("Edit link", alForm(l), async (v, f) => { await ok(sb.from("about_links").update(alPayload(v, f)).eq("id", l.id)); VIEWS.about(); }); };
+A.alDel = async d => { if (confirmBox("Link delete karna hai?")) { await ok(sb.from("about_links").delete().eq("id", d.id)); VIEWS.about(); } };
+A.alToggle = async d => { const l = window._about.find(x => x.id === d.id); await ok(sb.from("about_links").update({ is_active: !l.is_active }).eq("id", d.id)); VIEWS.about(); };
+A.alUp = async d => { await reorder("about_links", window._about, d.id, -1); VIEWS.about(); };
+A.alDown = async d => { await reorder("about_links", window._about, d.id, 1); VIEWS.about(); };
+
+/* ================= Settings ================= */
+VIEWS.settings = async () => {
+  const cfgs = await ok(sb.from("app_config").select("*"));
+  const g = k => cfgs.find(c => c.key === k)?.value || {};
+  const m = g("maintenance"), th = g("auto_hide_threshold");
+  const admins = await ok(sb.from("admins").select("*"));
+  setMain(head("Settings") + `<div class="list">
+  <form class="card" id="fm1" style="display:grid;gap:10px"><h3>Maintenance message</h3><p class="muted sm" style="margin:0">ON karoge toh sabko app kholte hi ye message dikhega (app band nahi hoti).</p>
+    <label class="chk"><input type="checkbox" name="en" ${m.enabled ? "checked" : ""}> Maintenance ON</label>
+    <label>Message<input name="msg" maxlength="200" value="${esc(m.message)}" placeholder="Server maintenance chal raha hai."></label><div><button class="btn">Save</button></div></form>
+  <form class="card" id="fm2" style="display:grid;gap:10px"><h3>Auto-hide broken songs</h3><p class="muted sm" style="margin:0">Itne alag devices se error aaye (3 din mein) toh gaana apne aap chhup jaye.</p>
+    <label>Devices<input type="number" min="1" max="50" name="n" value="${th.value ?? 3}"></label><div><button class="btn">Save</button></div></form>
+  <div class="card"><h3>Admins</h3>${admins.map(a => `<div class="muted sm">${esc(a.email || a.user_id)}</div>`).join("")}<p class="muted sm">Naya admin: Supabase → Authentication → Users mein user banao, phir SQL Editor mein <code>insert into public.admins(user_id,email) select id,email from auth.users where email='...';</code></p></div>
+  <div class="card" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" id="lo">Logout</button><button class="btn ghost" id="rp">Change Supabase project</button></div></div>`);
+  $("#fm1").onsubmit = e => { e.preventDefault(); guard(async () => { const f = e.target; await ok(sb.from("app_config").upsert({ key: "maintenance", value: { enabled: chk(f, "en"), message: f.elements.msg.value.trim() } })); toast("Saved"); }); };
+  $("#fm2").onsubmit = e => { e.preventDefault(); guard(async () => { const n = Math.max(1, parseInt(e.target.elements.n.value, 10) || 3); await ok(sb.from("app_config").upsert({ key: "auto_hide_threshold", value: { value: n } })); toast("Saved"); }); };
+  $("#lo").onclick = async () => { await sb.auth.signOut(); boot(); };
+  $("#rp").onclick = () => { localStorage.removeItem(CFG_KEY); boot(); };
+};
+
+boot();
+</script>
+</body>
+</html>

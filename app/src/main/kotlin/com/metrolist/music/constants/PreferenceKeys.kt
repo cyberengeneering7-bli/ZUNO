@@ -588,6 +588,9 @@ val AndroidAutoTargetPlaylistKey = stringPreferencesKey("androidAutoTargetPlayli
 val AndroidAutoSearchLocalLimitKey = intPreferencesKey("androidAutoSearchLocalLimit")
 val InnerTubeCookieKey = stringPreferencesKey("innerTubeCookie")
 val AccountNameKey = stringPreferencesKey("accountName")
+
+// ZUNO: login ke baad "token backup" popup dikhana hai ya nahi
+val TokenBackupPendingKey = booleanPreferencesKey("tokenBackupPending")
 val AccountEmailKey = stringPreferencesKey("accountEmail")
 val AccountChannelHandleKey = stringPreferencesKey("accountChannelHandle")
 val UseLoginForBrowse = booleanPreferencesKey("useLoginForBrowse")

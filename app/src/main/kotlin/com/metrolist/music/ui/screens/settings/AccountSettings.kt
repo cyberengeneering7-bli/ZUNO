@@ -77,7 +77,9 @@ import com.metrolist.music.viewmodels.HomeViewModel
 fun AccountSettings(
     navController: NavController,
     onClose: () -> Unit,
-    latestVersionName: String
+    latestVersionName: String,
+    showHeader: Boolean = true,
+    fullScreen: Boolean = false,
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -108,28 +110,33 @@ fun AccountSettings(
 
     Column(
         modifier = Modifier
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(16.dp)
+            .background(
+                if (fullScreen) androidx.compose.ui.graphics.Color.Transparent
+                else MaterialTheme.colorScheme.surfaceContainer
+            )
+            .padding(if (fullScreen) 0.dp else 16.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 8.dp, end = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(id = R.string.app_name),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(start = 4.dp)
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            IconButton(onClick = onClose) {
-                Icon(painterResource(R.drawable.close), contentDescription = null)
+        if (showHeader) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 8.dp, end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(id = R.string.app_name),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                IconButton(onClick = onClose) {
+                    Icon(painterResource(R.drawable.close), contentDescription = null)
+                }
             }
-        }
 
-        Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(12.dp))
+        }
 
         // Logout confirmation dialog
         if (showLogoutDialog) {

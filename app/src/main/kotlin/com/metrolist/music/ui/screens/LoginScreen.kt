@@ -15,6 +15,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -68,6 +69,7 @@ import com.metrolist.music.R
 import com.metrolist.music.constants.AccountChannelHandleKey
 import com.metrolist.music.constants.AccountEmailKey
 import com.metrolist.music.constants.AccountNameKey
+import com.metrolist.music.constants.TokenBackupPendingKey
 import com.metrolist.music.constants.DataSyncIdKey
 import com.metrolist.music.constants.InnerTubeAuthUserKey
 import com.metrolist.music.constants.InnerTubeCookieKey
@@ -115,6 +117,8 @@ fun LoginScreen(
     var accounts by remember { mutableStateOf<List<YouTubeAccount>>(emptyList()) }
     var selectedAccount by remember { mutableStateOf<YouTubeAccount?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    // ZUNO: jab tak pehla page load na ho, logo + loader dikhao (black screen nahi)
+    var pageReady by remember { mutableStateOf(false) }
 
     suspend fun extractAuthData(webView: WebView?): AuthData? {
         val view = webView ?: return null
@@ -197,6 +201,7 @@ fun LoginScreen(
                         settings[AccountNameKey] = accountInfo.name
                         settings[AccountEmailKey] = accountInfo.email.orEmpty()
                         settings[AccountChannelHandleKey] = accountInfo.channelHandle.orEmpty()
+                        if (!isSwitchingChannel) settings[TokenBackupPendingKey] = true
                     }
                 }
             check(saved) { "Failed to persist account data" }
@@ -303,9 +308,10 @@ fun LoginScreen(
                 .fillMaxSize(),
     ) {
         AndroidView(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().padding(top = 64.dp),
             factory = { webViewContext ->
                 WebView(webViewContext).apply {
+                    setBackgroundColor(android.graphics.Color.WHITE)
                     webViewClient =
                         object : WebViewClient() {
                             override fun shouldOverrideUrlLoading(
@@ -332,6 +338,7 @@ fun LoginScreen(
                                 view: WebView,
                                 url: String?,
                             ) {
+                                pageReady = true
                                 val pageUri = url?.let(Uri::parse)
                                 if (pageUri?.scheme == "https" && pageUri.host == "music.youtube.com") {
                                     handleAuthenticatedPage()
@@ -360,6 +367,30 @@ fun LoginScreen(
                 }
             },
         )
+
+        if (!pageReady) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(top = 64.dp)
+                        .background(MaterialTheme.colorScheme.surface),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    androidx.compose.foundation.Image(
+                        painter = painterResource(R.drawable.zuno_logo),
+                        contentDescription = "ZUNO",
+                        modifier =
+                            Modifier
+                                .size(96.dp)
+                                .clip(RoundedCornerShape(26.dp)),
+                    )
+                    Spacer(Modifier.height(24.dp))
+                    CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
+                }
+            }
+        }
 
         if (loginStage == LoginStage.CheckingAccounts || loginStage == LoginStage.Completing) {
             CircularProgressIndicator(Modifier.align(Alignment.Center))

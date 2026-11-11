@@ -45,7 +45,15 @@ sealed class Screens(
         route = "library"
     )
 
+    // ZUNO: Account tab (route "account" pehle se kisi aur screen ka hai, isliye alag naam)
+    object Account : Screens(
+        titleId = R.string.account,
+        iconIdInactive = R.drawable.account,
+        iconIdActive = R.drawable.account,
+        route = "zuno_account"
+    )
+
     companion object {
-        val MainScreens = listOf(Home, Search, ListenTogether, Library)
+        val MainScreens = listOf(Home, Search, ListenTogether, Library, Account)
     }
 }
