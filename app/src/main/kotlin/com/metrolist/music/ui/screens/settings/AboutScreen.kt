@@ -150,7 +150,7 @@ private val upstreamCollaborators = listOf(
 
 private val communityLinks = listOf(
     CommunityLink(R.string.credits_github, R.drawable.github, "https://github.com/sheikhazim10000-ctrl"),
-    CommunityLink(R.string.credits_license_name, R.drawable.info, "https://github.com/FrancescoGrazioso/Meld/blob/main/LICENSE")
+    CommunityLink(R.string.credits_license_name, R.drawable.info, "https://zunocom.netlify.app/#fullGplText")
 )
 
 private fun handleEasterEggClick(
@@ -343,7 +343,7 @@ fun AboutScreen(
         ) + AboutRow(
             licenseLabel,
             R.drawable.info,
-            "https://github.com/FrancescoGrazioso/Meld/blob/main/LICENSE",
+            "https://zunocom.netlify.app/#fullGplText",
             licenseDesc,
         )
     val playerConnection = LocalPlayerConnection.current
