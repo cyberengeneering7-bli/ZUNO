@@ -333,12 +333,17 @@ fun AboutScreen(
     val licenseLabel = stringResource(R.string.credits_license_name)
     val licenseDesc = stringResource(R.string.credits_license_desc)
     val githubLabel = stringResource(R.string.credits_github)
+    // Remote About links are cached across app updates; keep stale LICENSE entries from showing.
+    val extraAboutLinks = remoteLinks.filterNot { link ->
+        link.label.contains("license", ignoreCase = true) ||
+            link.url.contains("/LICENSE", ignoreCase = true)
+    }
     val aboutRows =
         (
-            if (remoteLinks.isEmpty()) {
+            if (extraAboutLinks.isEmpty()) {
                 listOf(AboutRow(githubLabel, R.drawable.github, meldDeveloper.githubUrl, null))
             } else {
-                remoteLinks.map { AboutRow(it.label, aboutIcon(it.icon), it.url, null) }
+                extraAboutLinks.map { AboutRow(it.label, aboutIcon(it.icon), it.url, null) }
             }
         ) + AboutRow(
             licenseLabel,
