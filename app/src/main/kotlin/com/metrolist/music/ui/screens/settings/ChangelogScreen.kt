@@ -37,6 +37,17 @@ import com.metrolist.music.utils.Updater
 
 private val markdownLinkRegex = Regex("(@[a-zA-Z0-9_-]+)|(https?://[\\w-]+(\\.[\\w-]+)+[\\w.,@?^=%&:/~+#-]*[\\w@?^=%&/~+#-])")
 
+private fun zunoReleaseDescription(description: String): String {
+    val branded = description
+        .replace(Regex("(?i)https://github.com/FrancescoGrazioso/Meld"), "https://github.com/cyberengeneering7-bli/ZUNO")
+        .replace(Regex("(?i)\\bMeld\\.apk\\b"), "ZUNO.apk")
+        .replace(Regex("(?i)\\bMeld\\b"), "ZUNO")
+
+    return branded
+        .replace(Regex("(?im)^(#{1,6}\\s*What's new in )ZUNO\\b"), "\$1ZUNO by Salman")
+        .replace(Regex("(?im)^(#{1,6}\\s*)ZUNO(\\s+v\\d)"), "\$1ZUNO by Salman\$2")
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ChangelogScreen(
@@ -133,7 +144,7 @@ fun ChangelogScreen(
                     .align(Alignment.BottomEnd)
                     .padding(16.dp)
             ) {
-                val githubReleasesUrl = stringResource(R.string.github_releases_url)
+                val githubReleasesUrl = "https://github.com/cyberengeneering7-bli/ZUNO/releases"
                 ExtendedFloatingActionButton(
                     onClick = { uriHandler.openUri(githubReleasesUrl) },
                     icon = { Icon(painterResource(R.drawable.github), contentDescription = null, modifier = Modifier.size(24.dp)) },
@@ -183,7 +194,7 @@ fun ReleaseItem(release: ReleaseInfo) {
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                MarkdownText(release.description)
+                MarkdownText(zunoReleaseDescription(release.description))
             }
         }
     }
