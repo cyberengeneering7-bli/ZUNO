@@ -121,7 +121,7 @@ private data class CommunityLink(
 
 // ZUNO developer (naam yahan badal sakte ho)
 private val meldDeveloper = Contributor(
-    name = "Sheikh Azim",
+    name = "Salman Developer",
     roleRes = R.string.credits_developer,
     githubHandle = "sheikhazim10000-ctrl",
 )
