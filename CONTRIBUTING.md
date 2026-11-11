@@ -1,6 +1,6 @@
-# Contributing to Meld
+# Contributing to ZUNO
 
-Meld is an Android/Kotlin music client based on Jetpack Compose and Material 3. This guide describes the recommended local setup and validation flow for contributors.
+ZUNO is an Android/Kotlin music client based on Jetpack Compose and Material 3. This guide describes the recommended local setup and validation flow for contributors.
 
 ## 1. Requirements
 
@@ -139,7 +139,7 @@ cp local.properties.sample local.properties
 ```properties
 LASTFM_API_KEY=...
 LASTFM_SECRET=...
-CRASH_REPORT_REPO=francescograzioso/Meld
+CRASH_REPORT_REPO=owner/repository
 CRASH_REPORT_TOKEN=...
 ```
 
