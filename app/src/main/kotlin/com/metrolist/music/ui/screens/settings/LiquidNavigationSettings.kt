@@ -48,13 +48,13 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LiquidNavigationSettings(navController: NavController) {
-    val enabled by rememberPreference(LiquidGlassEnabledKey, false)
-    val vibrancy by rememberPreference(LiquidGlassVibrancyKey, 1.4f)
-    val blurRadius by rememberPreference(LiquidGlassBlurRadiusKey, 61f)
-    val refractionHeight by rememberPreference(LiquidGlassRefractionHeightKey, 12f)
-    val refractionAmount by rememberPreference(LiquidGlassRefractionAmountKey, 24f)
-    val chromaticAberration by rememberPreference(LiquidGlassChromaticAberrationKey, 0.5f)
-    val depthEffect by rememberPreference(LiquidGlassDepthEffectKey, 0.2f)
+    val (enabled, onEnabledChange) = rememberPreference(LiquidGlassEnabledKey, false)
+    val (vibrancy, onVibrancyChange) = rememberPreference(LiquidGlassVibrancyKey, 1.4f)
+    val (blurRadius, onBlurRadiusChange) = rememberPreference(LiquidGlassBlurRadiusKey, 61f)
+    val (refractionHeight, onRefractionHeightChange) = rememberPreference(LiquidGlassRefractionHeightKey, 12f)
+    val (refractionAmount, onRefractionAmountChange) = rememberPreference(LiquidGlassRefractionAmountKey, 24f)
+    val (chromaticAberration, onChromaticAberrationChange) = rememberPreference(LiquidGlassChromaticAberrationKey, 0.5f)
+    val (depthEffect, onDepthEffectChange) = rememberPreference(LiquidGlassDepthEffectKey, 0.2f)
 
     Column(
         modifier = Modifier
@@ -92,7 +92,7 @@ fun LiquidNavigationSettings(navController: NavController) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Switch(checked = enabled, onCheckedChange = { enabled = it })
+                Switch(checked = enabled, onCheckedChange = onEnabledChange)
             }
         }
 
@@ -111,7 +111,7 @@ fun LiquidNavigationSettings(navController: NavController) {
             range = 0.5f..2f,
             enabled = enabled,
             valueLabel = String.format(Locale.getDefault(), "%.1f×", vibrancy),
-            onValueChange = { vibrancy = it },
+            onValueChange = onVibrancyChange,
         )
         EffectSlider(
             title = stringResource(R.string.liquid_glass_blur_radius),
@@ -120,7 +120,7 @@ fun LiquidNavigationSettings(navController: NavController) {
             range = 0f..100f,
             enabled = enabled,
             valueLabel = String.format(Locale.getDefault(), "%.0f px", blurRadius),
-            onValueChange = { blurRadius = it },
+            onValueChange = onBlurRadiusChange,
         )
         EffectSlider(
             title = stringResource(R.string.liquid_glass_refraction_height),
@@ -129,7 +129,7 @@ fun LiquidNavigationSettings(navController: NavController) {
             range = 1f..48f,
             enabled = enabled,
             valueLabel = String.format(Locale.getDefault(), "%.0f dp", refractionHeight),
-            onValueChange = { refractionHeight = it },
+            onValueChange = onRefractionHeightChange,
         )
         EffectSlider(
             title = stringResource(R.string.liquid_glass_refraction_amount),
@@ -138,7 +138,7 @@ fun LiquidNavigationSettings(navController: NavController) {
             range = 0f..80f,
             enabled = enabled,
             valueLabel = String.format(Locale.getDefault(), "%.0f dp", refractionAmount),
-            onValueChange = { refractionAmount = it },
+            onValueChange = onRefractionAmountChange,
         )
         EffectSlider(
             title = stringResource(R.string.liquid_glass_chromatic_aberration),
@@ -147,7 +147,7 @@ fun LiquidNavigationSettings(navController: NavController) {
             range = 0f..1f,
             enabled = enabled,
             valueLabel = String.format(Locale.getDefault(), "%.2f", chromaticAberration),
-            onValueChange = { chromaticAberration = it },
+            onValueChange = onChromaticAberrationChange,
         )
         EffectSlider(
             title = stringResource(R.string.liquid_glass_depth_effect),
@@ -156,7 +156,7 @@ fun LiquidNavigationSettings(navController: NavController) {
             range = 0f..1f,
             enabled = enabled,
             valueLabel = String.format(Locale.getDefault(), "%.2f", depthEffect),
-            onValueChange = { depthEffect = it },
+            onValueChange = onDepthEffectChange,
         )
 
         Spacer(Modifier.height(12.dp))
