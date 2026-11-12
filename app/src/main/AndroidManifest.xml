@@ -91,16 +91,16 @@
                     android:pathPrefix="/callback" />
             </intent-filter>
 
-            <!-- Listen Together invite link -->
-            <intent-filter android:autoVerify="true">
+            <!-- ZUNO Listen Together invite link: zuno://listen?code=XXXX -->
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data android:scheme="https" />
-                <data android:host="metrolist.cc" />
-                <data android:pathPrefix="/listen" />
+                <data
+                    android:scheme="zuno"
+                    android:host="listen" />
             </intent-filter>
 
             <!-- Youtube filter -->

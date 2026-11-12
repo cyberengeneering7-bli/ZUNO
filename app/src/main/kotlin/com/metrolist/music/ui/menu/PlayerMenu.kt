@@ -1569,7 +1569,7 @@ fun ListenTogetherDialog(
                                 Spacer(modifier = Modifier.height(12.dp))
                                 val inviteLink =
                                     remember(room.roomCode) {
-                                        "https://metrolist.cc/listen?code=${room.roomCode}"
+                                        com.metrolist.music.zuno.ZunoLinks.listenInvite(room.roomCode)
                                     }
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,

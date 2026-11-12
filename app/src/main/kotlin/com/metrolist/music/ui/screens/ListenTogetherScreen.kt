@@ -697,7 +697,7 @@ private fun RoomStatusCard(
                 Spacer(modifier = Modifier.height(16.dp))
                 val inviteLink =
                     remember(roomCode) {
-                        "https://metrolist.cc/listen?code=$roomCode"
+                        com.metrolist.music.zuno.ZunoLinks.listenInvite(roomCode)
                     }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
