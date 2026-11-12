@@ -88,6 +88,13 @@ import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.constants.CropAlbumArtKey
 import com.metrolist.music.constants.DarkModeKey
+import com.metrolist.music.constants.LiquidGlassBlurRadiusKey
+import com.metrolist.music.constants.LiquidGlassChromaticAberrationKey
+import com.metrolist.music.constants.LiquidGlassDepthEffectKey
+import com.metrolist.music.constants.LiquidGlassEnabledKey
+import com.metrolist.music.constants.LiquidGlassRefractionAmountKey
+import com.metrolist.music.constants.LiquidGlassRefractionHeightKey
+import com.metrolist.music.constants.LiquidGlassVibrancyKey
 import com.metrolist.music.constants.MiniPlayerHeight
 import com.metrolist.music.constants.PureBlackMiniPlayerKey
 import com.metrolist.music.constants.SwipeSensitivityKey
@@ -122,6 +129,7 @@ import coil3.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.metrolist.music.ui.theme.PlayerColorExtractor
+import com.metrolist.music.ui.component.liquidGlassIfAvailable
 import androidx.compose.animation.core.spring
 
 /**
@@ -186,6 +194,13 @@ private fun NewMiniPlayer(
         MiniPlayerBackgroundStyleKey,
         defaultValue = MiniPlayerBackgroundStyle.DEFAULT,
     )
+    val liquidGlassEnabled by rememberPreference(LiquidGlassEnabledKey, false)
+    val glassVibrancy by rememberPreference(LiquidGlassVibrancyKey, 1.4f)
+    val glassBlurRadius by rememberPreference(LiquidGlassBlurRadiusKey, 61f)
+    val glassRefractionHeight by rememberPreference(LiquidGlassRefractionHeightKey, 12f)
+    val glassRefractionAmount by rememberPreference(LiquidGlassRefractionAmountKey, 24f)
+    val glassChromaticAberration by rememberPreference(LiquidGlassChromaticAberrationKey, 0.5f)
+    val glassDepthEffect by rememberPreference(LiquidGlassDepthEffectKey, 0.2f)
     val context = LocalContext.current
     var gradientColors by remember { mutableStateOf<List<Color>>(emptyList()) }
     // Whether the current cover art is bright enough that white icons would be hard to read.
@@ -292,16 +307,18 @@ private fun NewMiniPlayer(
     }
 
     // Memoize colors
-    val backgroundColor = when (miniPlayerBackground) {
-        MiniPlayerBackgroundStyle.DEFAULT    -> MaterialTheme.colorScheme.surfaceContainer
+    val backgroundColor = if (liquidGlassEnabled) {
+        if (useDarkTheme) Color.Black.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.34f)
+    } else when (miniPlayerBackground) {
+        MiniPlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.surfaceContainer
         MiniPlayerBackgroundStyle.TRANSPARENT -> Color.Black.copy(alpha = 0.25f)
-        MiniPlayerBackgroundStyle.BLUR       -> MaterialTheme.colorScheme.surfaceContainer
-        MiniPlayerBackgroundStyle.GRADIENT   -> MaterialTheme.colorScheme.surfaceContainer
+        MiniPlayerBackgroundStyle.BLUR -> MaterialTheme.colorScheme.surfaceContainer
+        MiniPlayerBackgroundStyle.GRADIENT -> MaterialTheme.colorScheme.surfaceContainer
         MiniPlayerBackgroundStyle.PURE_BLACK -> Color.Black
     }
     val forceLightColors = !useDarkTheme && (miniPlayerBackground == MiniPlayerBackgroundStyle.PURE_BLACK ||
             miniPlayerBackground == MiniPlayerBackgroundStyle.BLUR ||
-            miniPlayerBackground == MiniPlayerBackgroundStyle.GRADIENT)
+            miniPlayerBackground == MiniPlayerBackgroundStyle.GRADIENT) || (liquidGlassEnabled && useDarkTheme)
 
     val primaryColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.primary
     val outlineColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.outline
@@ -386,6 +403,16 @@ private fun NewMiniPlayer(
                     .height(64.dp)
                     .offset { IntOffset(offsetXAnimatable.value.roundToInt(), 0) }
                     .clip(RoundedCornerShape(32.dp))
+                    .liquidGlassIfAvailable(
+                        enabled = liquidGlassEnabled,
+                        cornerRadius = 32.dp,
+                        refractionHeightDp = glassRefractionHeight,
+                        refractionAmountDp = glassRefractionAmount,
+                        blurRadiusPx = glassBlurRadius,
+                        vibrancy = glassVibrancy,
+                        chromaticAberration = glassChromaticAberration,
+                        depthEffect = glassDepthEffect,
+                    )
                     .background(color = backgroundColor)
                     .border(1.dp, outlineColor.copy(alpha = 0.3f), RoundedCornerShape(32.dp))
                     .clickable(
@@ -394,7 +421,7 @@ private fun NewMiniPlayer(
                         onClick = onClick
                     ),
         ) {
-            when (miniPlayerBackground) {
+            if (!liquidGlassEnabled) when (miniPlayerBackground) {
                 MiniPlayerBackgroundStyle.BLUR -> {
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                         mediaMetadata?.thumbnailUrl?.let { url ->
@@ -696,6 +723,13 @@ private fun LegacyMiniPlayer(
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val pureBlack by rememberPreference(PureBlackMiniPlayerKey, defaultValue = false)
+    val liquidGlassEnabled by rememberPreference(LiquidGlassEnabledKey, false)
+    val glassVibrancy by rememberPreference(LiquidGlassVibrancyKey, 1.4f)
+    val glassBlurRadius by rememberPreference(LiquidGlassBlurRadiusKey, 61f)
+    val glassRefractionHeight by rememberPreference(LiquidGlassRefractionHeightKey, 12f)
+    val glassRefractionAmount by rememberPreference(LiquidGlassRefractionAmountKey, 24f)
+    val glassChromaticAberration by rememberPreference(LiquidGlassChromaticAberrationKey, 0.5f)
+    val glassDepthEffect by rememberPreference(LiquidGlassDepthEffectKey, 0.2f)
 
     val playbackState by playerConnection.playbackState.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
@@ -757,8 +791,22 @@ private fun LegacyMiniPlayer(
                 .height(MiniPlayerHeight)
                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
                 .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                .liquidGlassIfAvailable(
+                    enabled = liquidGlassEnabled,
+                    cornerRadius = 16.dp,
+                    refractionHeightDp = glassRefractionHeight,
+                    refractionAmountDp = glassRefractionAmount,
+                    blurRadiusPx = glassBlurRadius,
+                    vibrancy = glassVibrancy,
+                    chromaticAberration = glassChromaticAberration,
+                    depthEffect = glassDepthEffect,
+                )
                 .background(
-                    if (pureBlack && isSystemInDarkTheme()) {
+                    if (liquidGlassEnabled && isSystemInDarkTheme()) {
+                        Color.Black.copy(alpha = 0.30f)
+                    } else if (liquidGlassEnabled) {
+                        Color.White.copy(alpha = 0.34f)
+                    } else if (pureBlack && isSystemInDarkTheme()) {
                         Color.Black
                     } else {
                         MaterialTheme.colorScheme.surfaceContainer

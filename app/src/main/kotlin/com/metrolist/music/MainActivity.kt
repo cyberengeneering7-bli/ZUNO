@@ -149,6 +149,7 @@ import com.metrolist.music.constants.ExperimentalLyricsKey
 import com.metrolist.music.constants.LastSeenVersionKey
 import com.metrolist.music.constants.ListenTogetherInTopBarKey
 import com.metrolist.music.constants.ListenTogetherUsernameKey
+import com.metrolist.music.constants.LiquidGlassEnabledKey
 import com.metrolist.music.constants.LyricsProviderOrderKey
 import com.metrolist.music.constants.SpotifyAccessTokenKey
 import com.metrolist.music.constants.MiniPlayerBottomSpacing
@@ -182,11 +183,14 @@ import com.metrolist.music.playback.queues.YouTubeQueue
 import com.metrolist.music.ui.component.AccountSettingsDialog
 import com.metrolist.music.ui.component.AppNavigationBar
 import com.metrolist.music.ui.component.AppNavigationRail
+import com.metrolist.music.ui.component.LocalLiquidGlassBackdrop
 import com.metrolist.music.ui.component.BottomSheetMenu
 import com.metrolist.music.ui.component.BottomSheetPage
 import com.metrolist.music.ui.component.LocalBottomSheetPageState
 import com.metrolist.music.ui.component.LocalMenuState
 import com.metrolist.music.ui.component.rememberBottomSheetState
+import com.metrolist.music.ui.component.recordLiquidGlassBackdrop
+import com.metrolist.music.ui.component.rememberLiquidGlassBackdrop
 import com.metrolist.music.ui.component.shimmer.ShimmerTheme
 import com.metrolist.music.ui.menu.YouTubeSongMenu
 import com.metrolist.music.ui.player.BottomSheetPlayer
@@ -1035,8 +1039,11 @@ class MainActivity : FragmentActivity() {
 
                 val baseBg = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
                 val artistNameAliases by ArtistNameAliases.aliases.collectAsStateWithLifecycle()
+                val liquidGlassEnabled by rememberPreference(LiquidGlassEnabledKey, false)
+                val liquidGlassBackdrop = rememberLiquidGlassBackdrop()
 
                 CompositionLocalProvider(
+                    LocalLiquidGlassBackdrop provides liquidGlassBackdrop,
                     LocalDatabase provides database,
                     LocalNavController provides navController,
                     LocalContentColor provides if (pureBlack) Color.White else contentColorFor(MaterialTheme.colorScheme.surface),
@@ -1317,7 +1324,7 @@ class MainActivity : FragmentActivity() {
                                     onHomeLongHold = { showAccountDialog = true },
                                 )
                             }
-                            Box(Modifier.weight(1f)) {
+                            Box(Modifier.weight(1f).recordLiquidGlassBackdrop(liquidGlassBackdrop, liquidGlassEnabled)) {
                                 // NavHost with animations (Material 3 Expressive style)
                                 NavHost(
                                     navController = navController,

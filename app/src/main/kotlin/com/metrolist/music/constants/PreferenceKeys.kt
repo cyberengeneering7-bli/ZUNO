@@ -21,6 +21,13 @@ val DarkModeKey = stringPreferencesKey("darkMode")
 val PureBlackKey = booleanPreferencesKey("pureBlack")
 val PureBlackMiniPlayerKey = booleanPreferencesKey("pureBlackMiniPlayer")
 val MiniPlayerBackgroundStyleKey = stringPreferencesKey("miniPlayerBackgroundStyle")
+val LiquidGlassEnabledKey = booleanPreferencesKey("liquidGlassEnabled")
+val LiquidGlassVibrancyKey = floatPreferencesKey("liquidGlassVibrancy")
+val LiquidGlassBlurRadiusKey = floatPreferencesKey("liquidGlassBlurRadius")
+val LiquidGlassRefractionHeightKey = floatPreferencesKey("liquidGlassRefractionHeight")
+val LiquidGlassRefractionAmountKey = floatPreferencesKey("liquidGlassRefractionAmount")
+val LiquidGlassChromaticAberrationKey = floatPreferencesKey("liquidGlassChromaticAberration")
+val LiquidGlassDepthEffectKey = floatPreferencesKey("liquidGlassDepthEffect")
 
 enum class MiniPlayerBackgroundStyle {
     DEFAULT,

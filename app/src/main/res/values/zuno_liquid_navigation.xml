@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="liquid_navigation_title">Liquid Navigation</string>
+    <string name="liquid_navigation_short">Liquid Navigation</string>
+    <string name="liquid_navigation_description">Customize the floating glass navigation and mini player.</string>
+    <string name="liquid_glass_enable">Enable Liquid Glass</string>
+    <string name="liquid_glass_enable_description">Apply the glass effect to navigation, mini player and settings search.</string>
+    <string name="liquid_glass_effects">Effects</string>
+    <string name="liquid_glass_vibrancy">Vibrancy</string>
+    <string name="liquid_glass_vibrancy_description">Increase the saturation of the glass backdrop.</string>
+    <string name="liquid_glass_blur_radius">Blur Radius</string>
+    <string name="liquid_glass_blur_radius_description">Amount of blur on the glass surface.</string>
+    <string name="liquid_glass_refraction_height">Lens Refraction Height</string>
+    <string name="liquid_glass_refraction_height_description">Manage lens refraction height.</string>
+    <string name="liquid_glass_refraction_amount">Lens Refraction Amount</string>
+    <string name="liquid_glass_refraction_amount_description">Manage lens refraction amount.</string>
+    <string name="liquid_glass_chromatic_aberration">Chromatic Aberration</string>
+    <string name="liquid_glass_chromatic_aberration_description">Adjust the color separation around the glass edges.</string>
+    <string name="liquid_glass_depth_effect">Depth Effect</string>
+    <string name="liquid_glass_depth_effect_description">Adjust the perceived depth of the glass lens.</string>
+    <string name="liquid_glass_compatibility">Full refraction effects require Android 13 or later. Earlier Android versions use a translucent glass-style fallback.</string>
+</resources>

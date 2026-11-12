@@ -19,8 +19,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -30,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.navigation.NavController
 import com.metrolist.music.BuildConfig
+import com.metrolist.music.constants.LiquidGlassEnabledKey
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
 import com.metrolist.music.ui.component.IconButton
@@ -47,6 +51,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.style.TextOverflow
 
@@ -116,6 +121,7 @@ fun SettingsScreen(
 
     val queryState = remember { mutableStateOf("") }
     val query = queryState.value
+    val liquidGlassEnabled by com.metrolist.music.utils.rememberPreference(LiquidGlassEnabledKey, false)
 
     val appearanceEntry = SettingsEntry(
         stringResource(R.string.appearance),
@@ -169,8 +175,14 @@ fun SettingsScreen(
         painterResource(R.drawable.restore),
         "settings/backup_restore",
     )
+    val liquidNavigationEntry = SettingsEntry(
+        stringResource(R.string.liquid_navigation_title),
+        "liquid glass navigation floating bar blur vibrancy refraction effects",
+        painterResource(R.drawable.palette),
+        "settings/liquid_navigation",
+    )
     val allEntries = listOfNotNull(
-        appearanceEntry, playerEntry, contentEntry, aiEntry, autoEntry,
+        appearanceEntry, playerEntry, contentEntry, aiEntry, autoEntry, liquidNavigationEntry,
         privacyEntry, storageEntry, backupEntry,
     )
 
@@ -195,12 +207,27 @@ fun SettingsScreen(
         )
 
         // Settings ke andar search (gaane yahan nahi dhoondhte, sirf options)
+        val searchShape = RoundedCornerShape(28.dp)
+        val searchGlassModifier = if (liquidGlassEnabled) {
+            Modifier
+                .clip(searchShape)
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.28f), searchShape)
+                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.38f), searchShape)
+        } else Modifier
         OutlinedTextField(
             value = query,
             onValueChange = { queryState.value = it },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().then(searchGlassModifier),
             singleLine = true,
-            shape = RoundedCornerShape(28.dp),
+            shape = searchShape,
+            colors = if (liquidGlassEnabled) {
+                OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                    unfocusedBorderColor = Color.Transparent,
+                )
+            } else OutlinedTextFieldDefaults.colors(),
             placeholder = { Text("Search settings") },
             leadingIcon = {
                 Icon(painter = painterResource(R.drawable.search), contentDescription = null)
@@ -280,6 +307,7 @@ fun SettingsScreen(
             Material3SettingsGroup(
                 title = "ZUNO",
                 items = buildList {
+                    add(entryItem(liquidNavigationEntry))
                     if (isAndroid12OrLater) {
                         add(
                             Material3SettingsItem(

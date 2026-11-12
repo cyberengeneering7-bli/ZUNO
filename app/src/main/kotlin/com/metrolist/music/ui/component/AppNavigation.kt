@@ -7,7 +7,20 @@ package com.metrolist.music.ui.component
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -22,14 +35,27 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import com.metrolist.music.constants.LiquidGlassBlurRadiusKey
+import com.metrolist.music.constants.LiquidGlassChromaticAberrationKey
+import com.metrolist.music.constants.LiquidGlassDepthEffectKey
+import com.metrolist.music.constants.LiquidGlassEnabledKey
+import com.metrolist.music.constants.LiquidGlassRefractionAmountKey
+import com.metrolist.music.constants.LiquidGlassRefractionHeightKey
+import com.metrolist.music.constants.LiquidGlassVibrancyKey
 import com.metrolist.music.ui.screens.Screens
+import com.metrolist.music.utils.rememberPreference
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 
@@ -139,6 +165,21 @@ fun AppNavigationBar(
     onSearchLongClick: (() -> Unit)? = null,
     onHomeLongHold: (() -> Unit)? = null,
 ) {
+    val liquidGlassEnabled by rememberPreference(LiquidGlassEnabledKey, false)
+    if (liquidGlassEnabled) {
+        LiquidGlassNavigationBar(
+            navigationItems = navigationItems,
+            currentRoute = currentRoute,
+            onItemClick = onItemClick,
+            modifier = modifier,
+            pureBlack = pureBlack,
+            slimNav = slimNav,
+            onSearchLongClick = onSearchLongClick,
+            onHomeLongHold = onHomeLongHold,
+        )
+        return
+    }
+
     val containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
     val contentColor = if (pureBlack) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
     val haptics = LocalHapticFeedback.current
@@ -213,6 +254,127 @@ fun AppNavigationBar(
                     }
                 } else null
             )
+        }
+    }
+}
+
+@Composable
+private fun LiquidGlassNavigationBar(
+    navigationItems: List<Screens>,
+    currentRoute: String?,
+    onItemClick: (Screens, Boolean) -> Unit,
+    modifier: Modifier,
+    pureBlack: Boolean,
+    slimNav: Boolean,
+    onSearchLongClick: (() -> Unit)?,
+    onHomeLongHold: (() -> Unit)?,
+) {
+    val vibrancy by rememberPreference(LiquidGlassVibrancyKey, 1.4f)
+    val blurRadius by rememberPreference(LiquidGlassBlurRadiusKey, 61f)
+    val refractionHeight by rememberPreference(LiquidGlassRefractionHeightKey, 12f)
+    val refractionAmount by rememberPreference(LiquidGlassRefractionAmountKey, 24f)
+    val chromaticAberration by rememberPreference(LiquidGlassChromaticAberrationKey, 0.5f)
+    val depthEffect by rememberPreference(LiquidGlassDepthEffectKey, 0.2f)
+    val haptics = LocalHapticFeedback.current
+    val viewConfiguration = LocalViewConfiguration.current
+    val navHeight = if (slimNav) 52.dp else 64.dp
+    val radius = navHeight / 2f
+    val baseColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+    val foreground = if (pureBlack) Color.White else MaterialTheme.colorScheme.onSurface
+
+    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(top = if (slimNav) 6.dp else 8.dp)
+                .height(navHeight)
+                .clip(RoundedCornerShape(radius))
+                .liquidGlassIfAvailable(
+                    enabled = true,
+                    cornerRadius = radius,
+                    refractionHeightDp = refractionHeight,
+                    refractionAmountDp = refractionAmount,
+                    blurRadiusPx = blurRadius,
+                    vibrancy = vibrancy,
+                    chromaticAberration = chromaticAberration,
+                    depthEffect = depthEffect,
+                )
+                .background(baseColor.copy(alpha = 0.42f), RoundedCornerShape(radius))
+                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.34f), RoundedCornerShape(radius))
+                .padding(5.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            navigationItems.forEach { screen ->
+                val isSelected = remember(currentRoute, screen.route) {
+                    isRouteSelected(currentRoute, screen.route, navigationItems)
+                }
+                val currentIsSelected by rememberUpdatedState(isSelected)
+                val iconRes = remember(isSelected, screen) {
+                    if (isSelected) screen.iconIdActive else screen.iconIdInactive
+                }
+                val isSearchItem = screen == Screens.Search && onSearchLongClick != null
+                val isHomeHoldItem = screen == Screens.Home && onHomeLongHold != null
+                val interactionSource = remember { MutableInteractionSource() }
+
+                if (isSearchItem || isHomeHoldItem) {
+                    LaunchedEffect(interactionSource) {
+                        var isLongClick = false
+                        interactionSource.interactions.collectLatest { interaction ->
+                            when (interaction) {
+                                is PressInteraction.Press -> {
+                                    isLongClick = false
+                                    delay(if (isHomeHoldItem) 15_000L else viewConfiguration.longPressTimeoutMillis)
+                                    isLongClick = true
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    if (isHomeHoldItem) onHomeLongHold.invoke() else onSearchLongClick?.invoke()
+                                }
+                                is PressInteraction.Release -> {
+                                    if (!isLongClick) onItemClick(screen, currentIsSelected)
+                                }
+                                is PressInteraction.Cancel -> isLongClick = false
+                            }
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .weight(if (isSelected && !slimNav) 1.55f else 1f)
+                        .fillMaxHeight()
+                        .clip(CircleShape)
+                        .background(if (isSelected) Color.White.copy(alpha = 0.16f) else Color.Transparent)
+                        .semantics { selected = isSelected }
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = LocalIndication.current,
+                            role = Role.Tab,
+                            onClick = {
+                                if (!isSearchItem && !isHomeHoldItem) onItemClick(screen, currentIsSelected)
+                            },
+                        )
+                        .padding(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = stringResource(screen.titleId),
+                        tint = foreground,
+                    )
+                    if (isSelected && !slimNav) {
+                        Text(
+                            text = stringResource(screen.titleId),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = foreground,
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(start = 5.dp),
+                        )
+                    }
+                }
+            }
         }
     }
 }
