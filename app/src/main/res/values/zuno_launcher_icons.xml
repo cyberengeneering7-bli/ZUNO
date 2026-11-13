@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="launcher_icon_settings_title">Choose Your Launcher Icon</string>
+    <string name="launcher_icon_settings_description">Choose an icon for ZUNO. Your home screen launcher may take a moment to refresh it.</string>
+    <string name="launcher_icon_current">Currently selected</string>
+    <string name="launcher_icon_restart_title">Apply launcher icon?</string>
+    <string name="launcher_icon_restart_message">Switch to %1$s and close ZUNO now? Open ZUNO again from your launcher after the icon updates.</string>
+    <string name="launcher_icon_restart_action">Apply &amp; close</string>
+    <string name="launcher_icon_apply_failed">Could not update the launcher icon. Try again or restart your launcher.</string>
+    <string name="launcher_icon_name_0">Liquid Glass Note</string>
+    <string name="launcher_icon_name_1">Neon Music Note</string>
+    <string name="launcher_icon_name_2">Vinyl Player</string>
+    <string name="launcher_icon_name_3">Studio Headphones</string>
+    <string name="launcher_icon_name_4">Neon Note</string>
+    <string name="launcher_icon_name_5">Crystal Play</string>
+    <string name="launcher_icon_name_6">Royal Gold Note</string>
+    <string name="launcher_icon_name_7">Spectrum Equalizer</string>
+    <string name="launcher_icon_name_8">Monochrome Note</string>
+    <string name="launcher_icon_name_9">Neon Headphones</string>
+</resources>

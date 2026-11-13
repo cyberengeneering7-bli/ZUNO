@@ -61,6 +61,7 @@ import com.metrolist.music.ui.screens.settings.SettingsScreen
 import com.metrolist.music.ui.screens.settings.StorageSettings
 import com.metrolist.music.ui.screens.settings.ThemeScreen
 import com.metrolist.music.ui.screens.settings.LiquidNavigationSettings
+import com.metrolist.music.ui.screens.settings.LauncherIconSettings
 import com.metrolist.music.ui.screens.settings.UpdaterScreen
 import com.metrolist.music.ui.screens.settings.integrations.DiscordSettings
 import com.metrolist.music.ui.screens.settings.integrations.IntegrationScreen
@@ -382,6 +383,10 @@ fun NavGraphBuilder.navigationBuilder(
 
     composable("settings/liquid_navigation") {
         LiquidNavigationSettings(navController)
+    }
+
+    composable("settings/launcher_icons") {
+        LauncherIconSettings(navController)
     }
 
     composable("settings/content") {

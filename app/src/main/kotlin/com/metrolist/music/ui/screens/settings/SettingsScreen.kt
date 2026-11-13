@@ -184,8 +184,14 @@ fun SettingsScreen(
         painterResource(R.drawable.palette),
         "settings/liquid_navigation",
     )
+    val launcherIconEntry = SettingsEntry(
+        stringResource(R.string.launcher_icon_settings_title),
+        "app icon launcher home screen change choose customize",
+        painterResource(R.drawable.launcher_icon_00),
+        "settings/launcher_icons",
+    )
     val allEntries = listOfNotNull(
-        appearanceEntry, playerEntry, contentEntry, aiEntry, autoEntry, liquidNavigationEntry,
+        appearanceEntry, playerEntry, contentEntry, aiEntry, autoEntry, liquidNavigationEntry, launcherIconEntry,
         privacyEntry, storageEntry, backupEntry,
     )
 
@@ -323,6 +329,7 @@ fun SettingsScreen(
                 title = "ZUNO",
                 items = buildList {
                     add(entryItem(liquidNavigationEntry))
+                    add(entryItem(launcherIconEntry))
                     if (isAndroid12OrLater) {
                         add(
                             Material3SettingsItem(
