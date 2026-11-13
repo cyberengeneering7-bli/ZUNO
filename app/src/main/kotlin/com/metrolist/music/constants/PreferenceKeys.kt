@@ -28,6 +28,7 @@ val LiquidGlassRefractionHeightKey = floatPreferencesKey("liquidGlassRefractionH
 val LiquidGlassRefractionAmountKey = floatPreferencesKey("liquidGlassRefractionAmount")
 val LiquidGlassChromaticAberrationKey = floatPreferencesKey("liquidGlassChromaticAberration")
 val LiquidGlassDepthEffectKey = floatPreferencesKey("liquidGlassDepthEffect")
+val LiquidGlassTextColorKey = intPreferencesKey("liquidGlassTextColor")
 
 enum class MiniPlayerBackgroundStyle {
     DEFAULT,

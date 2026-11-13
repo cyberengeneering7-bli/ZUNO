@@ -92,6 +92,7 @@ import com.metrolist.music.constants.LiquidGlassBlurRadiusKey
 import com.metrolist.music.constants.LiquidGlassChromaticAberrationKey
 import com.metrolist.music.constants.LiquidGlassDepthEffectKey
 import com.metrolist.music.constants.LiquidGlassEnabledKey
+import com.metrolist.music.constants.LiquidGlassTextColorKey
 import com.metrolist.music.constants.LiquidGlassRefractionAmountKey
 import com.metrolist.music.constants.LiquidGlassRefractionHeightKey
 import com.metrolist.music.constants.LiquidGlassVibrancyKey
@@ -201,6 +202,7 @@ private fun NewMiniPlayer(
     val glassRefractionAmount by rememberPreference(LiquidGlassRefractionAmountKey, 24f)
     val glassChromaticAberration by rememberPreference(LiquidGlassChromaticAberrationKey, 0.5f)
     val glassDepthEffect by rememberPreference(LiquidGlassDepthEffectKey, 0.2f)
+    val (glassTextColorArgb) = rememberPreference(LiquidGlassTextColorKey, -1)
     val context = LocalContext.current
     var gradientColors by remember { mutableStateOf<List<Color>>(emptyList()) }
     // Whether the current cover art is bright enough that white icons would be hard to read.
@@ -320,9 +322,10 @@ private fun NewMiniPlayer(
             miniPlayerBackground == MiniPlayerBackgroundStyle.BLUR ||
             miniPlayerBackground == MiniPlayerBackgroundStyle.GRADIENT) || (liquidGlassEnabled && useDarkTheme)
 
-    val primaryColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.primary
-    val outlineColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.outline
-    val onSurfaceColor = if (forceLightColors) Color.White else MaterialTheme.colorScheme.onSurface
+    val glassForeground = Color(glassTextColorArgb)
+    val primaryColor = if (liquidGlassEnabled) glassForeground else if (forceLightColors) Color.White else MaterialTheme.colorScheme.primary
+    val outlineColor = if (liquidGlassEnabled) glassForeground else if (forceLightColors) Color.White else MaterialTheme.colorScheme.outline
+    val onSurfaceColor = if (liquidGlassEnabled) glassForeground else if (forceLightColors) Color.White else MaterialTheme.colorScheme.onSurface
     val errorColor = if (forceLightColors) Color(0xFFFF6B6B) else MaterialTheme.colorScheme.error
 
     Box(
@@ -414,7 +417,21 @@ private fun NewMiniPlayer(
                         depthEffect = glassDepthEffect,
                     )
                     .background(color = backgroundColor)
-                    .border(1.dp, outlineColor.copy(alpha = 0.3f), RoundedCornerShape(32.dp))
+                    .then(
+                        if (liquidGlassEnabled) {
+                            Modifier.background(
+                                Brush.verticalGradient(
+                                    listOf(Color.White.copy(alpha = 0.15f), Color.White.copy(alpha = 0.025f), Color.Transparent),
+                                ),
+                                RoundedCornerShape(32.dp),
+                            )
+                        } else Modifier,
+                    )
+                    .border(
+                        1.dp,
+                        outlineColor.copy(alpha = if (liquidGlassEnabled) 0.48f else 0.3f),
+                        RoundedCornerShape(32.dp),
+                    )
                     .clickable(
                         interactionSource = interactionSource,
                         indication = LocalIndication.current,

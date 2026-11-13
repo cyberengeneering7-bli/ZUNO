@@ -1,6 +1,11 @@
 package com.metrolist.music.ui.screens.settings
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,8 +14,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -28,6 +35,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -40,10 +50,22 @@ import com.metrolist.music.constants.LiquidGlassDepthEffectKey
 import com.metrolist.music.constants.LiquidGlassEnabledKey
 import com.metrolist.music.constants.LiquidGlassRefractionAmountKey
 import com.metrolist.music.constants.LiquidGlassRefractionHeightKey
+import com.metrolist.music.constants.LiquidGlassTextColorKey
 import com.metrolist.music.constants.LiquidGlassVibrancyKey
 import com.metrolist.music.ui.component.IconButton
 import com.metrolist.music.utils.rememberPreference
 import java.util.Locale
+
+private val glassTextColorChoices = listOf(
+    R.string.glass_color_white to 0xFFFFFFFF.toInt(),
+    R.string.glass_color_red to 0xFFFF5252.toInt(),
+    R.string.glass_color_yellow to 0xFFFFD740.toInt(),
+    R.string.glass_color_orange to 0xFFFF9100.toInt(),
+    R.string.glass_color_green to 0xFF69F0AE.toInt(),
+    R.string.glass_color_blue to 0xFF448AFF.toInt(),
+    R.string.glass_color_purple to 0xFFE040FB.toInt(),
+    R.string.glass_color_cyan to 0xFF18FFFF.toInt(),
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,6 +77,7 @@ fun LiquidNavigationSettings(navController: NavController) {
     val (refractionAmount, onRefractionAmountChange) = rememberPreference(LiquidGlassRefractionAmountKey, 24f)
     val (chromaticAberration, onChromaticAberrationChange) = rememberPreference(LiquidGlassChromaticAberrationKey, 0.5f)
     val (depthEffect, onDepthEffectChange) = rememberPreference(LiquidGlassDepthEffectKey, 0.2f)
+    val (glassTextColorArgb, onGlassTextColorChange) = rememberPreference(LiquidGlassTextColorKey, -1)
 
     Column(
         modifier = Modifier
@@ -93,6 +116,59 @@ fun LiquidNavigationSettings(navController: NavController) {
                     )
                 }
                 Switch(checked = enabled, onCheckedChange = onEnabledChange)
+            }
+        }
+
+        Spacer(Modifier.height(20.dp))
+        Text(
+            text = stringResource(R.string.liquid_glass_text_color),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 8.dp),
+        )
+        Text(
+            text = stringResource(R.string.liquid_glass_text_color_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 8.dp),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            glassTextColorChoices.forEach { (labelRes, argb) ->
+                val swatch = Color(argb)
+                val selected = glassTextColorArgb == argb
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(swatch)
+                            .border(
+                                width = if (selected) 3.dp else 1.dp,
+                                color = if (selected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.7f),
+                                shape = CircleShape,
+                            )
+                            .clickable { onGlassTextColorChange(argb) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (selected) {
+                            Icon(
+                                painter = painterResource(R.drawable.check),
+                                contentDescription = null,
+                                tint = if (swatch.luminance() > 0.5f) Color.Black else Color.White,
+                            )
+                        }
+                    }
+                    Text(
+                        text = stringResource(labelRes),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
             }
         }
 

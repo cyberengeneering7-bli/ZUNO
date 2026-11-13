@@ -34,6 +34,7 @@ import androidx.core.net.toUri
 import androidx.navigation.NavController
 import com.metrolist.music.BuildConfig
 import com.metrolist.music.constants.LiquidGlassEnabledKey
+import com.metrolist.music.constants.LiquidGlassTextColorKey
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.R
 import com.metrolist.music.ui.component.IconButton
@@ -122,6 +123,8 @@ fun SettingsScreen(
     val queryState = remember { mutableStateOf("") }
     val query = queryState.value
     val liquidGlassEnabled by com.metrolist.music.utils.rememberPreference(LiquidGlassEnabledKey, false)
+    val (glassTextColorArgb) = com.metrolist.music.utils.rememberPreference(LiquidGlassTextColorKey, -1)
+    val glassTextColor = Color(glassTextColorArgb)
 
     val appearanceEntry = SettingsEntry(
         stringResource(R.string.appearance),
@@ -177,7 +180,7 @@ fun SettingsScreen(
     )
     val liquidNavigationEntry = SettingsEntry(
         stringResource(R.string.liquid_navigation_title),
-        "liquid glass navigation floating bar blur vibrancy refraction effects",
+        "liquid glass navigation floating bar scroll collapse blur vibrancy refraction effects glass text color",
         painterResource(R.drawable.palette),
         "settings/liquid_navigation",
     )
@@ -220,6 +223,9 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth().then(searchGlassModifier),
             singleLine = true,
             shape = searchShape,
+            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                color = if (liquidGlassEnabled) glassTextColor else MaterialTheme.colorScheme.onSurface,
+            ),
             colors = if (liquidGlassEnabled) {
                 OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
@@ -228,9 +234,18 @@ fun SettingsScreen(
                     unfocusedBorderColor = Color.Transparent,
                 )
             } else OutlinedTextFieldDefaults.colors(),
-            placeholder = { Text("Search settings") },
+            placeholder = {
+                Text(
+                    "Search settings",
+                    color = if (liquidGlassEnabled) glassTextColor.copy(alpha = 0.72f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
             leadingIcon = {
-                Icon(painter = painterResource(R.drawable.search), contentDescription = null)
+                Icon(
+                    painter = painterResource(R.drawable.search),
+                    contentDescription = null,
+                    tint = if (liquidGlassEnabled) glassTextColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             },
             trailingIcon = {
                 if (query.isNotEmpty()) {

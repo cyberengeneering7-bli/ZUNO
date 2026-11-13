@@ -79,6 +79,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -91,7 +92,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -1040,8 +1043,38 @@ class MainActivity : FragmentActivity() {
                 val baseBg = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
                 val artistNameAliases by ArtistNameAliases.aliases.collectAsStateWithLifecycle()
                 val liquidGlassEnabled by rememberPreference(LiquidGlassEnabledKey, false)
+                var liquidGlassDockCompact by remember { mutableStateOf(false) }
+                val liquidGlassScrollAccumulator = remember { mutableFloatStateOf(0f) }
+                val liquidGlassScrollThreshold = with(LocalDensity.current) { 26.dp.toPx() }
+                val liquidGlassScrollConnection = remember(liquidGlassEnabled, liquidGlassScrollThreshold) {
+                    object : NestedScrollConnection {
+                        override fun onPostScroll(
+                            consumed: Offset,
+                            available: Offset,
+                            source: androidx.compose.ui.input.nestedscroll.NestedScrollSource,
+                        ): Offset {
+                            if (!liquidGlassEnabled || playerBottomSheetState.isExpanded || consumed.y == 0f) {
+                                return Offset.Zero
+                            }
+                            liquidGlassScrollAccumulator.floatValue += consumed.y
+                            if (liquidGlassScrollAccumulator.floatValue <= -liquidGlassScrollThreshold) {
+                                liquidGlassDockCompact = true
+                                liquidGlassScrollAccumulator.floatValue = 0f
+                            } else if (liquidGlassScrollAccumulator.floatValue >= liquidGlassScrollThreshold) {
+                                liquidGlassDockCompact = false
+                                liquidGlassScrollAccumulator.floatValue = 0f
+                            }
+                            return Offset.Zero
+                        }
+                    }
+                }
+                LaunchedEffect(liquidGlassEnabled) {
+                    if (!liquidGlassEnabled) {
+                        liquidGlassDockCompact = false
+                        liquidGlassScrollAccumulator.floatValue = 0f
+                    }
+                }
                 val liquidGlassBackdrop = rememberLiquidGlassBackdrop()
-
                 CompositionLocalProvider(
                     LocalLiquidGlassBackdrop provides liquidGlassBackdrop,
                     LocalDatabase provides database,
@@ -1188,12 +1221,14 @@ class MainActivity : FragmentActivity() {
                             val navBarTotalHeight = bottomInset + NavigationBarHeight
 
                             if (!showRail && currentRoute != "wrapped") {
+                                val compactGlassDock = liquidGlassEnabled && liquidGlassDockCompact && !showRail
                                 Box {
                                     if (activePlayerConnection != null) {
                                         BottomSheetPlayer(
                                             state = playerBottomSheetState,
                                             navController = navController,
                                             pureBlack = pureBlack,
+                                            hideCollapsedMiniPlayer = compactGlassDock,
                                         )
                                     }
 
@@ -1205,6 +1240,9 @@ class MainActivity : FragmentActivity() {
                                         slimNav = slimNav,
                                         onSearchLongClick = onSearchLongClick,
                                         onHomeLongHold = { showAccountDialog = true },
+                                        compact = compactGlassDock,
+                                        hasPlayer = activePlayerConnection != null,
+                                        onCompactPlayerClick = { playerBottomSheetState.expandSoft() },
                                         modifier =
                                             Modifier
                                                 .align(Alignment.BottomCenter)
@@ -1278,7 +1316,8 @@ class MainActivity : FragmentActivity() {
                         modifier =
                             Modifier
                                 .fillMaxSize()
-                                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection),
+                                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                                .nestedScroll(liquidGlassScrollConnection),
                     ) {
                         Row(Modifier.fillMaxSize()) {
                             val onRailItemClick: (Screens, Boolean) -> Unit =
