@@ -460,7 +460,7 @@ private fun CompactGlassPlayer(
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
-                text = mediaMetadata?.title ?: stringResource(R.string.no_title),
+                text = mediaMetadata?.title ?: "ZUNO",
                 color = foreground,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
