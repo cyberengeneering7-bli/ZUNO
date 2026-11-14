@@ -1,43 +1,38 @@
 package com.metrolist.music.ui.component
 
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
+import androidx.compose.material3.carousel.maskClip
+import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.util.lerp
 import coil3.compose.AsyncImage
-import kotlinx.coroutines.delay
-import kotlin.math.absoluteValue
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
 
 /**
  * ZUNO home banner (data panel se aata hai).
@@ -56,143 +51,145 @@ data class ZunoBanner(
     val colorEnd: Color = Color(0xFFEB4060),
 )
 
-@OptIn(ExperimentalFoundationApi::class)
+/** Ek baar mein sabse zyada itne banner (pinned pehle). */
+private const val MAX_BANNERS = 20
+
+/**
+ * Bada card beech mein, aur dono taraf patli patti. Slide karne par patti khidki ke palle ki tarah
+ * khulti aur band hoti hai (Material 3 carousel). Card pe patla glass jaisa border.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ZunoBannerCarousel(
     banners: List<ZunoBanner>,
     onBannerClick: (ZunoBanner) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (banners.isEmpty()) return
+    val items = remember(banners) { banners.take(MAX_BANNERS) }
+    if (items.isEmpty()) return
 
-    val pagerState = rememberPagerState(pageCount = { banners.size })
+    // list badalne par (cache -> internet) card ginti sahi rahe
+    val count by rememberUpdatedState(items.size)
+    val state = rememberCarouselState { count }
+    val shape = RoundedCornerShape(32.dp)
 
-    // Apne aap slide (har 4.5 sec), user swipe kare to ruk jata hai
-    LaunchedEffect(banners.size) {
-        if (banners.size < 2) return@LaunchedEffect
-        while (true) {
-            delay(4500)
-            if (!pagerState.isScrollInProgress) {
-                val next = (pagerState.currentPage + 1) % banners.size
-                pagerState.animateScrollToPage(next)
-            }
-        }
-    }
-
-    Column(modifier = modifier.fillMaxWidth()) {
-        HorizontalPager(
-            state = pagerState,
-            contentPadding = PaddingValues(horizontal = 24.dp), // agla banner thoda dikhega (peek)
-            pageSpacing = 12.dp,
-            modifier = Modifier.fillMaxWidth(),
-        ) { page ->
-            val banner = banners[page]
-            val offset =
-                ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction).absoluteValue
-            val scale = lerp(0.92f, 1f, 1f - offset.coerceIn(0f, 1f))
-            val alpha = lerp(0.7f, 1f, 1f - offset.coerceIn(0f, 1f))
-
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16f / 9f)
-                        .graphicsLayer {
-                            scaleX = scale
-                            scaleY = scale
-                            this.alpha = alpha
-                        }.clip(RoundedCornerShape(24.dp))
-                        .background(
-                            Brush.linearGradient(listOf(banner.colorStart, banner.colorEnd)),
-                        ).clickable { onBannerClick(banner) },
-            ) {
-                if (banner.imageUrl != null) {
-                    AsyncImage(
-                        model = banner.imageUrl,
-                        contentDescription = banner.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-
-                // Neeche gehra gradient taaki text saaf padhe
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(Color.Transparent, Color(0xCC000000)),
-                                    startY = 120f,
-                                ),
-                            ),
-                )
-
-                Column(
-                    modifier =
-                        Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(16.dp),
-                ) {
-                    Text(
-                        text = banner.title,
-                        color = Color.White,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = banner.subtitle,
-                        color = Color.White.copy(alpha = 0.85f),
-                        fontSize = 13.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Box(
-                        modifier =
-                            Modifier
-                                .padding(top = 10.dp)
-                                .clip(CircleShape)
-                                .background(Color.White)
-                                .padding(horizontal = 18.dp, vertical = 7.dp),
-                    ) {
-                        Text(
-                            text = "Play",
-                            color = Color.Black,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    }
-                }
-            }
-        }
-
-        // Dots
-        Row(
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(340.dp)
+                .padding(horizontal = 16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        HorizontalMultiBrowseCarousel(
+            state = state,
+            preferredItemWidth = 320.dp,
+            itemSpacing = 8.dp,
             modifier =
                 Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(top = 10.dp, bottom = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            repeat(banners.size) { index ->
-                val selected = pagerState.currentPage == index
-                val dotWidth = animateDpAsState(if (selected) 20.dp else 7.dp, label = "dotWidth")
-                Box(
-                    modifier =
-                        Modifier
-                            .height(7.dp)
-                            .width(dotWidth.value)
-                            .clip(CircleShape)
-                            .background(
-                                if (selected) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
-                                },
+                    .fillMaxWidth()
+                    .height(340.dp),
+        ) { i ->
+            val banner = items[i]
+            ZunoBannerCard(
+                banner = banner,
+                onClick = { onBannerClick(banner) },
+                modifier = Modifier.maskClip(shape),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ZunoBannerCard(
+    banner: ZunoBanner,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val shape = RoundedCornerShape(32.dp)
+    Box(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(Brush.linearGradient(listOf(banner.colorStart, banner.colorEnd)))
+                .clickable(onClick = onClick),
+    ) {
+        if (banner.imageUrl != null) {
+            AsyncImage(
+                model =
+                    remember(banner.imageUrl) {
+                        ImageRequest
+                            .Builder(context)
+                            .data(banner.imageUrl)
+                            .memoryCachePolicy(CachePolicy.ENABLED)
+                            .diskCachePolicy(CachePolicy.ENABLED)
+                            .networkCachePolicy(CachePolicy.ENABLED)
+                            .build()
+                    },
+                contentDescription = banner.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
+        // Neeche gehra scrim, taaki text saaf padhe
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colorStops =
+                                arrayOf(
+                                    0.55f to Color.Transparent,
+                                    1f to Color(0xD9000000),
+                                ),
+                        ),
+                    ),
+        )
+
+        // Glass border
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .border(
+                        width = 1.dp,
+                        brush =
+                            Brush.linearGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.40f),
+                                    Color.White.copy(alpha = 0.12f),
+                                    Color.White.copy(alpha = 0.28f),
+                                ),
                             ),
+                        shape = shape,
+                    ),
+        )
+
+        Column(
+            modifier =
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(horizontal = 20.dp, vertical = 22.dp),
+        ) {
+            Text(
+                text = banner.title,
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (banner.subtitle.isNotBlank()) {
+                Text(
+                    text = banner.subtitle,
+                    color = Color.White.copy(alpha = 0.85f),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontSize = 16.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }

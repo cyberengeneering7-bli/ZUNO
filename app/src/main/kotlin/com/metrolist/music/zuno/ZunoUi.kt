@@ -6,6 +6,7 @@
 package com.metrolist.music.zuno
 
 import android.app.Activity
+import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -54,6 +55,7 @@ import com.metrolist.music.ui.component.ZunoBannerCarousel
 private fun ZunoRemoteSong.cover(): String = coverUrl ?: "https://i.ytimg.com/vi/$videoId/hqdefault.jpg"
 
 fun playZunoSong(
+    context: Context,
     playerConnection: PlayerConnection,
     song: ZunoRemoteSong,
 ) {
@@ -69,6 +71,7 @@ fun playZunoSong(
             ),
         ),
     )
+    ZunoPanel.reportSongPlay(context, song.videoId)
 }
 
 private val bannerPalette =
@@ -91,18 +94,50 @@ fun ZunoHomeBanners(
 
     LaunchedEffect(Unit) { ZunoPanelState.refresh(context) }
     val remote by ZunoPanelState.banners.collectAsStateWithLifecycle()
+    val topSongs by ZunoPanelState.topSongs.collectAsStateWithLifecycle()
 
     val banners =
-        remember(remote) {
-            remote.mapIndexed { i, b ->
+        remember(remote, topSongs) {
+            val ordered = buildList {
+                addAll(topSongs.filter { it.isPinnedBanner }.map { song ->
+                    ZunoRemoteBanner(
+                        id = "pinned-song:${song.videoId}",
+                        title = song.title,
+                        subtitle = song.artist,
+                        imageUrl = song.coverUrl ?: "https://i.ytimg.com/vi/${song.videoId}/hqdefault.jpg",
+                        actionType = "song",
+                        actionValue = song.videoId,
+                        isPinned = true,
+                        sortOrder = 0,
+                    )
+                })
+                addAll(remote.filter { it.isPinned })
+                addAll(topSongs.filterNot { it.isPinnedBanner }.map { song ->
+                    ZunoRemoteBanner(
+                        id = "top-song:${song.videoId}",
+                        title = song.title,
+                        subtitle = song.artist,
+                        imageUrl = song.coverUrl ?: "https://i.ytimg.com/vi/${song.videoId}/hqdefault.jpg",
+                        actionType = "song",
+                        actionValue = song.videoId,
+                        isPinned = false,
+                        sortOrder = 0,
+                    )
+                })
+                addAll(remote.filterNot { it.isPinned })
+            }.distinctBy { banner ->
+                if (banner.actionType == "song") "song:${banner.actionValue}" else "banner:${banner.id}"
+            }.take(20)
+
+            ordered.mapIndexed { i, banner ->
                 val (c1, c2) = bannerPalette[i % bannerPalette.size]
                 ZunoBanner(
-                    id = b.id,
-                    title = b.title,
-                    subtitle = b.subtitle,
-                    actionType = b.actionType,
-                    actionValue = b.actionValue,
-                    imageUrl = b.imageUrl,
+                    id = banner.id,
+                    title = banner.title,
+                    subtitle = banner.subtitle,
+                    actionType = banner.actionType,
+                    actionValue = banner.actionValue,
+                    imageUrl = banner.imageUrl,
                     colorStart = c1,
                     colorEnd = c2,
                 )
@@ -119,6 +154,7 @@ fun ZunoHomeBanners(
                     if (b.actionValue.isNotBlank() && playerConnection != null) {
                         val s = ZunoPanelState.songs.value.firstOrNull { it.videoId == b.actionValue }
                         playZunoSong(
+                            context,
                             playerConnection,
                             s ?: ZunoRemoteSong(b.actionValue, b.title, b.subtitle, b.imageUrl, null, null, 0, false, emptyList()),
                         )
@@ -134,6 +170,7 @@ fun ZunoHomeBanners(
 /** Panel ki categories Home pe sections ban kar dikhti hain. */
 @Composable
 fun ZunoPicks(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
     val playerConnection = LocalPlayerConnection.current
     val songs by ZunoPanelState.songs.collectAsStateWithLifecycle()
     val sections = remember(songs) { ZunoPanel.sections(songs) }
@@ -158,7 +195,7 @@ fun ZunoPicks(modifier: Modifier = Modifier) {
                             Modifier
                                 .width(140.dp)
                                 .clip(RoundedCornerShape(14.dp))
-                                .clickable { playerConnection?.let { playZunoSong(it, s) } },
+                                .clickable { playerConnection?.let { playZunoSong(context, it, s) } },
                     ) {
                         AsyncImage(
                             model = s.cover(),
@@ -215,7 +252,7 @@ fun ZunoSearchSection(query: String) {
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .clickable { playerConnection?.let { playZunoSong(it, s) } }
+                        .clickable { playerConnection?.let { playZunoSong(context, it, s) } }
                         .padding(horizontal = 16.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

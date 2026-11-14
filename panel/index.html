@@ -53,7 +53,7 @@ textarea{min-height:90px;resize:vertical}
 .row .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .thumb{width:56px;height:56px;border-radius:12px;object-fit:cover;background:var(--s3);flex:none}
-.bthumb{width:120px;height:68px;border-radius:12px;object-fit:cover;background:linear-gradient(135deg,var(--ac),var(--ac2));flex:none}
+.bthumb{width:76px;height:80px;border-radius:12px;object-fit:cover;background:linear-gradient(135deg,var(--ac),var(--ac2));flex:none}
 .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;background:var(--s3);color:var(--mu);margin-right:4px}
 .badge.pin{background:#3b2a24;color:var(--ac)} .badge.off{background:#3a2328;color:var(--bad)} .badge.on{background:#17352a;color:var(--ok)}
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:14px;z-index:50}
@@ -299,8 +299,9 @@ A.refresh = () => VIEWS[tab]();
 VIEWS.banners = async () => {
   const rows = await ok(sb.from("banners").select("*").order("is_pinned", { ascending: false }).order("sort_order").order("created_at", { ascending: false }));
   window._banners = rows;
-  setMain(head("Banners", `<button class="btn" data-a="bannerAdd">+ Add banner</button>`) +
-    `<p class="muted sm" style="margin:-6px 0 14px">Pinned banner hamesha sabse pehle dikhte hain. Image 16:9 (1280×720) rakho. Unlimited banners add kar sakte ho.</p>
+  const activeCount = rows.filter(b => b.is_active).length;
+  setMain(head("Banners", `<span class="badge ${activeCount > 20 ? "off" : "on"}">${activeCount} / 20 visible</span><button class="btn" data-a="bannerAdd">+ Add banner</button>`) +
+    `<p class="muted sm" style="margin:-6px 0 14px">App mein <b>sabse zyada 20</b> banner dikhte hain (Pinned pehle, phir order ke hisaab se). Image <b>lagbhag square</b> rakho (1080×1150 best), kyunki card lagbhag square hai aur kinaron se thoda kat sakta hai. Slide karne par patti khidki ke palle ki tarah khulti hai.</p>
     <div class="list">${rows.length ? rows.map(b => `<div class="row">
       ${b.image_url ? `<img class="bthumb" src="${esc(b.image_url)}" alt="">` : `<div class="bthumb"></div>`}
       <div class="grow"><div class="t">${esc(b.title)}</div><div class="muted sm">${esc(b.subtitle)}</div>
@@ -311,7 +312,7 @@ VIEWS.banners = async () => {
       <button class="btn ghost sm" data-a="bEdit" data-id="${b.id}">Edit</button><button class="btn bad sm" data-a="bDel" data-id="${b.id}">Delete</button></div></div>`).join("") : `<div class="empty">Abhi koi banner nahi. "+ Add banner" dabao.</div>`}</div>`);
 };
 function bannerForm(b = {}) {
-  return `<img class="prev" id="bp" src="${esc(b.image_url || "")}" alt="" onerror="this.removeAttribute('src')">
+  return `<img class="prev" id="bp" style="aspect-ratio:320/340;max-width:230px;border-radius:26px" src="${esc(b.image_url || "")}" alt="" onerror="this.removeAttribute('src')">
   <label>Title<input name="title" required maxlength="60" value="${esc(b.title)}"></label>
   <label>Subtitle<input name="subtitle" maxlength="90" value="${esc(b.subtitle)}"></label>
   <label>Image URL (ya neeche upload karo)<input name="image_url" id="bi" value="${esc(b.image_url)}" placeholder="https://..."></label>
@@ -344,11 +345,13 @@ function bannerPayload(v, f) {
     action_type: v.action_type, action_value: val, starts_at: fromLocalInput(v.starts_at), ends_at: fromLocalInput(v.ends_at),
     sort_order: parseInt(v.sort_order || 0, 10) || 0, is_pinned: chk(f, "is_pinned"), is_active: chk(f, "is_active") };
 }
-A.bannerAdd = () => { const m = modal("New banner", bannerForm(), async (v, f) => { await ok(sb.from("banners").insert(bannerPayload(v, f))); toast("Banner added"); VIEWS.banners(); }); bannerWire(m); };
+A.bannerAdd = () => {
+  if (window._banners.filter(b => b.is_active).length >= 20) toast("20 visible banner ho gaye. Naya banner visible rakhne ke liye pehle koi hide ya delete karo.", true);
+  const m = modal("New banner", bannerForm(), async (v, f) => { await ok(sb.from("banners").insert(bannerPayload(v, f))); toast("Banner added"); VIEWS.banners(); }); bannerWire(m); };
 A.bEdit = d => { const b = window._banners.find(x => x.id === d.id); const m = modal("Edit banner", bannerForm(b), async (v, f) => { await ok(sb.from("banners").update(bannerPayload(v, f)).eq("id", b.id)); toast("Saved"); VIEWS.banners(); }); bannerWire(m); };
 A.bDel = async d => { if (confirmBox("Ye banner delete karna hai?")) { await ok(sb.from("banners").delete().eq("id", d.id)); toast("Deleted"); VIEWS.banners(); } };
 A.bPin = async d => { const b = window._banners.find(x => x.id === d.id); await ok(sb.from("banners").update({ is_pinned: !b.is_pinned }).eq("id", d.id)); VIEWS.banners(); };
-A.bToggle = async d => { const b = window._banners.find(x => x.id === d.id); await ok(sb.from("banners").update({ is_active: !b.is_active }).eq("id", d.id)); VIEWS.banners(); };
+A.bToggle = async d => { const b = window._banners.find(x => x.id === d.id); if (!b.is_active && window._banners.filter(x => x.is_active).length >= 20) throw new Error("Max 20 visible banner. Pehle koi hide karo."); await ok(sb.from("banners").update({ is_active: !b.is_active }).eq("id", d.id)); VIEWS.banners(); };
 A.bUp = async d => { await reorder("banners", window._banners, d.id, -1); VIEWS.banners(); };
 A.bDown = async d => { await reorder("banners", window._banners, d.id, 1); VIEWS.banners(); };
 
@@ -387,6 +390,7 @@ VIEWS.songs = async () => {
   ]);
   window._songs = songs; window._cats = cats; sel.clear();
   setMain(head("Songs", `<button class="btn" data-a="songAdd">+ Add song</button><button class="btn ghost" data-a="songBulk">Bulk add</button><button class="btn ghost" data-a="songCheck">Check links</button>`) +
+    `<p class="muted sm" style="margin:-6px 0 12px">Home ke banner mein admin-pinned songs pehle, phir pichhle 30 din ke global play-count ke hisaab se Top 20 dikhte hain. Pin/Unpin se kisi song ko priority do.</p>` +
     `<div class="tools" style="margin-bottom:12px"><input id="sq" placeholder="Search title / artist / tag" value="${esc(songFilter.q)}">
     <select id="sc"><option value="">All categories</option><option value="_none">No category</option>${cats.map(c => `<option value="${c.id}" ${songFilter.cat === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>
     <button class="btn ghost sm" data-a="selDel">Delete selected</button><button class="btn ghost sm" data-a="selHide">Hide selected</button><button class="btn ghost sm" data-a="selShow">Show selected</button><button class="btn ghost sm" data-a="selMove">Move selected</button></div>
@@ -406,8 +410,8 @@ function drawSongs() {
     <input type="checkbox" data-a="selOne" data-id="${s.id}" ${sel.has(s.id) ? "checked" : ""}>
     <img class="thumb" src="${esc(s.cover_url || ytThumb(s.video_id))}" alt="" loading="lazy">
     <div class="grow"><div class="t">${esc(s.title)}</div><div class="muted sm">${esc(s.artist)} · ${esc(cats[s.category_id] || "no category")}</div>
-    <div>${s.is_active ? '<span class="badge on">live</span>' : '<span class="badge off">hidden</span>'}${s.auto_hidden ? '<span class="badge off">auto-hidden</span>' : ""}${(s.tags || []).map(t => `<span class="badge">#${esc(t)}</span>`).join("")}</div></div>
-    <div class="acts"><button class="btn ghost sm" data-a="songEdit" data-id="${s.id}">Edit</button><button class="btn bad sm" data-a="songDel" data-id="${s.id}">Delete</button></div></div>`).join("")
+    <div>${s.is_active ? '<span class="badge on">live</span>' : '<span class="badge off">hidden</span>'}${s.auto_hidden ? '<span class="badge off">auto-hidden</span>' : ""}${s.is_pinned_banner ? '<span class="badge pin">PINNED IN BANNER</span>' : ""}${(s.tags || []).map(t => `<span class="badge">#${esc(t)}</span>`).join("")}</div></div>
+    <div class="acts"><button class="btn ghost sm" data-a="songPin" data-id="${s.id}">${s.is_pinned_banner ? "Unpin banner" : "Pin banner"}</button><button class="btn ghost sm" data-a="songEdit" data-id="${s.id}">Edit</button><button class="btn bad sm" data-a="songDel" data-id="${s.id}">Delete</button></div></div>`).join("")
     + (rows.length > 300 ? `<div class="empty">Pehle 300 dikh rahe hain. Search use karo.</div>` : "")
     : `<div class="empty">Koi song nahi mila.</div>`;
 }
@@ -454,7 +458,8 @@ function songPayload(v, f) {
 }
 A.songAdd = () => { const m = modal("New song", songForm(), async (v, f) => { const p = songPayload(v, f); if (p.auto_hidden === undefined) delete p.auto_hidden; await ok(sb.from("songs").upsert(p, { onConflict: "video_id" })); toast("Song saved"); VIEWS.songs(); }); songWire(m); };
 A.songEdit = d => { const s = window._songs.find(x => x.id === d.id); const m = modal("Edit song", songForm(s), async (v, f) => { const p = songPayload(v, f); if (p.auto_hidden === undefined) delete p.auto_hidden; await ok(sb.from("songs").update(p).eq("id", s.id)); toast("Saved"); VIEWS.songs(); }); songWire(m); };
-A.songDel = async d => { if (confirmBox("Song delete karna hai?")) { await ok(sb.from("songs").delete().eq("id", d.id)); toast("Deleted"); VIEWS.songs(); } };
+A.songDel = async d => { if (confirmBox("Song delete karna hai?")) { await ok(sb.from("songs").delete().eq("id", d.id)); VIEWS.songs(); } };
+A.songPin = async d => { const s = window._songs.find(x => x.id === d.id); await ok(sb.from("songs").update({ is_pinned_banner: !s.is_pinned_banner }).eq("id", d.id)); toast(s.is_pinned_banner ? "Banner se unpin hua" : "Banner mein pin hua"); VIEWS.songs(); };
 A.songBulk = () => {
   modal("Bulk add songs", `<label>Har line mein ek YouTube link<textarea name="urls" required placeholder="https://youtu.be/...\nhttps://music.youtube.com/watch?v=..."></textarea></label>
   <label>Category<select name="cat"><option value="">(none)</option>${window._cats.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></label>
@@ -576,8 +581,9 @@ VIEWS.servers = async () => {
   const rows = await ok(sb.from("together_servers").select("*").order("priority").order("created_at"));
   window._srv = rows;
   setMain(head("Together servers", `<button class="btn" data-a="srvAdd">+ Add server</button>`) +
-    `<p class="muted sm" style="margin:-6px 0 14px">Listen Together ke servers. Number chhota = pehle try hoga. Ek band ho toh app agla try karega, aur yahan naya URL daalne se sabke app mein badal jayega.<br>
-    <b>Note:</b> app ka ye hissa abhi jodna baaki hai; ye list pehle se tayyar rakhi hai.</p>
+    `<p class="muted sm" style="margin:-6px 0 14px">Listen Together ke servers. <b>Active</b> servers mein se app <b>sabse chhota priority number</b> pehle use karta hai. Wo connect na ho toh agla try karta hai.<br>
+    Naya URL daaloge toh sabke app mein <b>app khulne ke baad</b> badal jayega (nayi APK ki zaroorat nahi). List khali rakhoge toh app apna default server use karega.<br>
+    Sirf <code>wss://</code> URL chalta hai. Server badalne par Together ke purane rooms band ho jate hain, kyunki room server ke andar hota hai.</p>
     <div class="list">${rows.length ? rows.map(s => `<div class="row"><div class="grow"><div class="t">${esc(s.name)}</div><div class="muted sm">${esc(s.url)}</div>
       <div><span class="badge ${s.is_active ? "on" : "off"}">${s.is_active ? "active" : "off"}</span><span class="badge">priority ${s.priority}</span></div></div>
       <div class="acts"><button class="btn ghost sm" data-a="srvTest" data-id="${s.id}">Test</button><button class="btn ghost sm" data-a="srvEdit" data-id="${s.id}">Edit</button><button class="btn bad sm" data-a="srvDel" data-id="${s.id}">Delete</button></div></div>`).join("") : `<div class="empty">Koi server nahi.</div>`}</div>`);

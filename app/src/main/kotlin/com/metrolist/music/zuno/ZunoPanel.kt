@@ -14,8 +14,13 @@ import com.metrolist.music.BuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -55,6 +60,8 @@ data class ZunoRemoteSong(
     val categoryOrder: Int,
     val showOnHome: Boolean,
     val tags: List<String>,
+    val isPinnedBanner: Boolean = false,
+    val playCount: Long = 0,
 )
 
 data class ZunoSection(
@@ -91,8 +98,12 @@ private fun JSONObject.str(name: String): String? = if (isNull(name)) null else 
 
 object ZunoPanel {
     private const val PREFS = "zuno_panel"
+    private const val PENDING_PLAYS_KEY = "pending_song_plays"
+    private const val MAX_PENDING_PLAYS = 60
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val reported = HashSet<String>()
+    private val pendingPlayLock = Any()
+    private val pendingPlayFlushMutex = Mutex()
 
     private fun prefs(c: Context) = c.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -190,7 +201,7 @@ object ZunoPanel {
         val raw =
             request(
                 "GET",
-                "/rest/v1/banners?select=*&is_active=eq.true&order=is_pinned.desc,sort_order.asc&limit=50",
+                "/rest/v1/banners?select=*&is_active=eq.true&order=is_pinned.desc,sort_order.asc,created_at.desc&limit=50",
             ) ?: return null
         prefs(c).edit().putString("banners", raw).apply()
         return parseBanners(raw)
@@ -219,6 +230,8 @@ object ZunoPanel {
                         categoryOrder = cat?.optInt("sort_order", 0) ?: 0,
                         showOnHome = cat?.optBoolean("show_on_home", true) ?: false,
                         tags = tags,
+                        isPinnedBanner = o.optBoolean("is_pinned_banner", false),
+                        playCount = o.optLong("play_count", 0),
                     )
             }
             out.filter { it.videoId.isNotBlank() }
@@ -234,7 +247,7 @@ object ZunoPanel {
             request(
                 "GET",
                 "/rest/v1/songs?select=video_id,title,artist,cover_url,tags,sort_order," +
-                    "category:categories(id,name,sort_order,show_on_home,is_active)" +
+                    "is_pinned_banner,category:categories(id,name,sort_order,show_on_home,is_active)" +
                     "&is_active=eq.true&order=sort_order.asc,created_at.desc&limit=1000",
             ) ?: return null
         val songs = parseSongs(raw)
@@ -244,6 +257,87 @@ object ZunoPanel {
             .putStringSet("song_ids", songs.map { it.videoId }.toSet())
             .apply()
         return songs
+    }
+
+    fun cachedTopSongs(c: Context): List<ZunoRemoteSong> = parseSongs(prefs(c).getString("top_songs", null))
+
+    suspend fun refreshTopSongs(c: Context): List<ZunoRemoteSong>? {
+        val raw =
+            request(
+                "POST",
+                "/rest/v1/rpc/zuno_top_songs",
+                JSONObject().put("p_limit", 20).toString(),
+            ) ?: return null
+        val songs = parseSongs(raw)
+        prefs(c).edit().putString("top_songs", raw).apply()
+        return songs
+    }
+
+    fun reportSongPlay(
+        c: Context,
+        videoId: String,
+    ) {
+        if (!ZunoPanelConfig.isConfigured || videoId.isBlank()) return
+        val context = c.applicationContext
+        synchronized(pendingPlayLock) {
+            val p = prefs(context)
+            val queued = JSONArray(p.getString(PENDING_PLAYS_KEY, "[]"))
+            if (queued.length() < MAX_PENDING_PLAYS) {
+                queued.put(videoId)
+                p.edit().putString(PENDING_PLAYS_KEY, queued.toString()).apply()
+            }
+        }
+        retryPendingSongPlays(context)
+    }
+
+    fun retryPendingSongPlays(c: Context) {
+        val context = c.applicationContext
+        scope.launch { flushPendingSongPlays(context) }
+    }
+
+    suspend fun flushPendingSongPlays(c: Context) {
+        if (!ZunoPanelConfig.isConfigured) return
+        pendingPlayFlushMutex.withLock {
+            val context = c.applicationContext
+            val p = prefs(context)
+            val pending =
+                synchronized(pendingPlayLock) {
+                    val snapshot = JSONArray(p.getString(PENDING_PLAYS_KEY, "[]"))
+                    p.edit().putString(PENDING_PLAYS_KEY, "[]").apply()
+                    snapshot
+                }
+            if (pending.length() == 0) return@withLock
+
+            val failed = JSONArray()
+            val device = deviceId(context)
+            for (start in 0 until pending.length() step 4) {
+                val end = minOf(start + 4, pending.length())
+                val results =
+                    coroutineScope {
+                        (start until end).map { i ->
+                            async {
+                                val videoId = pending.optString(i)
+                                if (videoId.isBlank()) return@async null
+                                val body = JSONObject().put("p_video_id", videoId).put("p_device_id", device).toString()
+                                if (request("POST", "/rest/v1/rpc/record_song_play", body) == null) videoId else null
+                            }
+                        }.awaitAll()
+                    }
+                results.filterNotNull().forEach { failed.put(it) }
+            }
+
+            if (failed.length() > 0) {
+                synchronized(pendingPlayLock) {
+                    val newlyQueued = JSONArray(p.getString(PENDING_PLAYS_KEY, "[]"))
+                    val combined = JSONArray()
+                    for (i in 0 until failed.length()) combined.put(failed.optString(i))
+                    for (i in 0 until newlyQueued.length() && combined.length() < MAX_PENDING_PLAYS; i++) {
+                        combined.put(newlyQueued.optString(i))
+                    }
+                    p.edit().putString(PENDING_PLAYS_KEY, combined.toString()).apply()
+                }
+            }
+        }
     }
 
     fun sections(songs: List<ZunoRemoteSong>): List<ZunoSection> =
@@ -417,6 +511,7 @@ object ZunoPanel {
 object ZunoPanelState {
     val banners = MutableStateFlow<List<ZunoRemoteBanner>>(emptyList())
     val songs = MutableStateFlow<List<ZunoRemoteSong>>(emptyList())
+    val topSongs = MutableStateFlow<List<ZunoRemoteSong>>(emptyList())
     val aboutLinks = MutableStateFlow<List<ZunoAboutLink>>(emptyList())
     val aboutInfo = MutableStateFlow(ZunoAboutInfo())
     private var initialised = false
@@ -426,6 +521,7 @@ object ZunoPanelState {
         initialised = true
         banners.value = ZunoPanel.cachedBanners(c)
         songs.value = ZunoPanel.cachedSongs(c)
+        topSongs.value = ZunoPanel.cachedTopSongs(c)
         aboutLinks.value = ZunoPanel.cachedAboutLinks(c)
         aboutInfo.value = ZunoPanel.cachedAboutInfo(c)
     }
@@ -440,7 +536,9 @@ object ZunoPanelState {
 
     suspend fun refresh(c: Context) {
         init(c)
+        ZunoPanel.retryPendingSongPlays(c)
         ZunoPanel.refreshBanners(c)?.let { banners.value = it }
         ZunoPanel.refreshSongs(c)?.let { songs.value = it }
+        ZunoPanel.refreshTopSongs(c)?.let { topSongs.value = it }
     }
 }

@@ -55,8 +55,24 @@ create table if not exists public.songs (
   last_error_at timestamptz,
   created_at  timestamptz not null default now()
 );
+alter table public.songs
+  add column if not exists is_pinned_banner boolean not null default false;
 create index if not exists songs_category_idx on public.songs(category_id);
 create index if not exists songs_active_idx   on public.songs(is_active);
+
+-- ---------------------------------------------------------------------
+-- Global song popularity (counts capped per device/song/day)
+-- ---------------------------------------------------------------------
+create table if not exists public.song_play_counts (
+  video_id       text not null references public.songs(video_id) on delete cascade,
+  device_key     text not null,
+  play_date      date not null default current_date,
+  play_count     int not null default 0 check (play_count between 0 and 20),
+  last_played_at timestamptz not null default now(),
+  primary key (video_id, device_key, play_date)
+);
+create index if not exists song_play_counts_recent_idx
+  on public.song_play_counts(video_id, play_date desc);
 
 -- ---------------------------------------------------------------------
 -- Banners  (unlimited, pin, schedule)
@@ -206,6 +222,71 @@ begin
 end;
 $$;
 
+create or replace function public.record_song_play(p_video_id text, p_device_id text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_device_key text;
+begin
+  if p_video_id is null or p_video_id !~ '^[A-Za-z0-9_-]{11}$'
+     or p_device_id is null or length(p_device_id) < 8 or length(p_device_id) > 80 then
+    return;
+  end if;
+  if not exists (select 1 from public.songs where video_id = p_video_id and is_active = true) then
+    return;
+  end if;
+
+  v_device_key := md5('zuno-play:' || p_device_id || current_date::text);
+  insert into public.song_play_counts(video_id, device_key, play_date, play_count, last_played_at)
+  values (p_video_id, v_device_key, current_date, 1, now())
+  on conflict (video_id, device_key, play_date) do update
+    set play_count = least(public.song_play_counts.play_count + 1, 20),
+        last_played_at = now();
+end;
+$$;
+
+create or replace function public.zuno_top_songs(p_limit integer default 20)
+returns table (
+  video_id text,
+  title text,
+  artist text,
+  cover_url text,
+  tags text[],
+  sort_order integer,
+  is_pinned_banner boolean,
+  play_count bigint
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select s.video_id, s.title, s.artist, s.cover_url, s.tags, s.sort_order,
+         s.is_pinned_banner,
+         coalesce(sum(c.play_count), 0)::bigint as play_count
+    from public.songs s
+    left join public.song_play_counts c
+      on c.video_id = s.video_id
+     and c.play_date >= current_date - 29
+   where s.is_active = true and s.auto_hidden = false
+   group by s.id
+   order by s.is_pinned_banner desc,
+            case when s.is_pinned_banner then s.sort_order end asc nulls last,
+            coalesce(sum(c.play_count), 0) desc,
+            max(c.last_played_at) desc nulls last,
+            s.created_at desc,
+            s.sort_order asc
+   limit least(greatest(coalesce(p_limit, 20), 1), 20);
+$$;
+
+revoke all on function public.record_song_play(text, text) from public;
+revoke all on function public.zuno_top_songs(integer) from public;
+grant execute on function public.record_song_play(text, text) to anon, authenticated;
+grant execute on function public.zuno_top_songs(integer) to anon, authenticated;
+
 grant execute on function public.register_device(text, text, text) to anon, authenticated;
 grant execute on function public.report_broken(text, text, text)    to anon, authenticated;
 grant execute on function public.is_admin() to anon, authenticated;
@@ -222,6 +303,7 @@ alter table public.together_servers enable row level security;
 alter table public.app_config       enable row level security;
 alter table public.devices          enable row level security;
 alter table public.song_reports     enable row level security;
+alter table public.song_play_counts enable row level security;
 
 -- admins: sirf admin dekh sakta hai
 drop policy if exists admins_admin_all on public.admins;
