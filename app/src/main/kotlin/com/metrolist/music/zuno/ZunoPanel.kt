@@ -32,8 +32,8 @@ import java.util.UUID
 
 object ZunoPanelConfig {
     // Supabase -> Project Settings -> API
-    const val SUPABASE_URL = "" // jaise: https://abcdxyz.supabase.co
-    const val SUPABASE_ANON_KEY = "" // "Publishable key" (sb_publishable_...) ya purani "anon" key. Secret / service_role KABHI mat daalna
+    const val SUPABASE_URL = "https://reewyyeweaopfcbuoohh.supabase.co"
+    const val SUPABASE_ANON_KEY = "sb_publishable_vfemJki7KpG-47pzSmcKQA_R4XcJwnR" // Public publishable key; secret / service_role KABHI mat daalna
 
     val isConfigured: Boolean
         get() = SUPABASE_URL.startsWith("https://") && SUPABASE_ANON_KEY.length > 20
