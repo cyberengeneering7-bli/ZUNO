@@ -331,7 +331,8 @@ object ZunoPanel {
                     val newlyQueued = JSONArray(p.getString(PENDING_PLAYS_KEY, "[]"))
                     val combined = JSONArray()
                     for (i in 0 until failed.length()) combined.put(failed.optString(i))
-                    for (i in 0 until newlyQueued.length() && combined.length() < MAX_PENDING_PLAYS; i++) {
+                    val remainingCapacity = (MAX_PENDING_PLAYS - combined.length()).coerceAtLeast(0)
+                    for (i in 0 until minOf(newlyQueued.length(), remainingCapacity)) {
                         combined.put(newlyQueued.optString(i))
                     }
                     p.edit().putString(PENDING_PLAYS_KEY, combined.toString()).apply()
