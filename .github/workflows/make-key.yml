@@ -1,0 +1,49 @@
+name: Migrate ZUNO signing key
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths: [".github/workflows/make-key.yml"]
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  migrate-signing-key:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore the existing signing key (never generate a replacement)
+        id: key-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: app/my-debug.keystore
+          key: zuno-debug-keystore-v1
+
+      - name: Store existing key as repository secrets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXISTING_ZUNO_KEYSTORE_BASE64: ${{ secrets.ZUNO_KEYSTORE_BASE64 }}
+          EXISTING_ZUNO_KEYSTORE_PASSWORD: ${{ secrets.ZUNO_KEYSTORE_PASSWORD }}
+          EXISTING_ZUNO_KEY_ALIAS: ${{ secrets.ZUNO_KEY_ALIAS }}
+          EXISTING_ZUNO_KEY_PASSWORD: ${{ secrets.ZUNO_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ ! -s app/my-debug.keystore ]; then
+            echo "::error::The existing signing-key cache was not found. No new key was generated; stop and recover the old key before changing signers."
+            exit 1
+          fi
+          keytool -list -keystore app/my-debug.keystore -storepass android -alias androiddebugkey >/dev/null
+          if [ -n "$EXISTING_ZUNO_KEYSTORE_BASE64$EXISTING_ZUNO_KEYSTORE_PASSWORD$EXISTING_ZUNO_KEY_ALIAS$EXISTING_ZUNO_KEY_PASSWORD" ]; then
+            echo "::error::At least one target signing secret already exists. Refusing to overwrite any signing credentials."
+            exit 1
+          fi
+          base64 -w0 app/my-debug.keystore | gh secret set ZUNO_KEYSTORE_BASE64 --repo "$GITHUB_REPOSITORY"
+          printf '%s' 'android' | gh secret set ZUNO_KEYSTORE_PASSWORD --repo "$GITHUB_REPOSITORY"
+          printf '%s' 'androiddebugkey' | gh secret set ZUNO_KEY_ALIAS --repo "$GITHUB_REPOSITORY"
+          printf '%s' 'android' | gh secret set ZUNO_KEY_PASSWORD --repo "$GITHUB_REPOSITORY"
+          echo "Existing ZUNO signing material was migrated to repository Actions Secrets. The private key was not printed or uploaded as an artifact."
