@@ -128,7 +128,11 @@ private fun ZunoBannerCard(
                 .networkCachePolicy(CachePolicy.ENABLED)
                 .build()
         }
-    val imagePainter = rememberAsyncImagePainter(model = imageRequest)
+    val imagePainter =
+        rememberAsyncImagePainter(
+            model = imageRequest,
+            contentScale = ContentScale.Crop,
+        )
     val imageState by imagePainter.state.collectAsState()
     val minimumShimmerDurationElapsed by
         produceState(initialValue = false, key1 = imageUrl) {
