@@ -21,6 +21,7 @@ import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -39,6 +40,7 @@ import coil3.compose.rememberAsyncImagePainter
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import com.metrolist.music.ui.component.shimmer.ShimmerHost
+import kotlinx.coroutines.delay
 
 /**
  * ZUNO home banner (data panel se aata hai).
@@ -59,6 +61,7 @@ data class ZunoBanner(
 
 /** Ek baar mein sabse zyada itne banner (pinned pehle). */
 private const val MAX_BANNERS = 20
+private const val MIN_BANNER_SHIMMER_DURATION_MS = 300L
 
 /**
  * Bada card beech mein, aur dono taraf patli patti. Slide karne par patti khidki ke palle ki tarah
@@ -127,11 +130,18 @@ private fun ZunoBannerCard(
         }
     val imagePainter = rememberAsyncImagePainter(model = imageRequest)
     val imageState by imagePainter.state.collectAsState()
+    val minimumShimmerDurationElapsed by
+        produceState(initialValue = false, key1 = imageUrl) {
+            if (imageUrl != null) {
+                delay(MIN_BANNER_SHIMMER_DURATION_MS)
+                value = true
+            }
+        }
     val hasLoadedImage = imageUrl != null && imageState is AsyncImagePainter.State.Success
     val isLoadingImage =
         imageUrl != null &&
-            imageState !is AsyncImagePainter.State.Success &&
-            imageState !is AsyncImagePainter.State.Error
+            imageState !is AsyncImagePainter.State.Error &&
+            (imageState !is AsyncImagePainter.State.Success || !minimumShimmerDurationElapsed)
 
     Box(
         modifier =
