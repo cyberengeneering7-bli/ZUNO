@@ -425,6 +425,7 @@ object ZunoPanel {
                 JSONObject()
                     .put("p_device_id", deviceId(c))
                     .put("p_app_version", BuildConfig.VERSION_NAME)
+                    .put("p_app_version_code", BuildConfig.VERSION_CODE)
                     .put("p_model", "${Build.MANUFACTURER} ${Build.MODEL}")
                     .toString()
             request("POST", "/rest/v1/rpc/register_device", body)?.let {

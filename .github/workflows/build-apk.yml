@@ -33,24 +33,14 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # Ek hi signing key har build mein use hogi, taaki naya APK
-      # purane ke upar bina uninstall kiye update ho jaye.
-      - name: Restore signing key cache
-        id: keycache
-        uses: actions/cache@v4
-        with:
-          path: app/my-debug.keystore
-          key: zuno-debug-keystore-v1
-
-      - name: Create signing key (pehli baar)
-        if: steps.keycache.outputs.cache-hit != 'true'
+      - name: Decode permanent signing key
+        env:
+          ZUNO_KEYSTORE_BASE64: ${{ secrets.ZUNO_KEYSTORE_BASE64 }}
         run: |
-          keytool -genkeypair -v \
-            -keystore app/my-debug.keystore \
-            -storepass android -keypass android \
-            -alias androiddebugkey \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=ZUNO,O=ZUNO,C=IN"
+          set -euo pipefail
+          test -n "$ZUNO_KEYSTORE_BASE64"
+          printf '%s' "$ZUNO_KEYSTORE_BASE64" | base64 --decode > app/zuno-release.jks
+          test -s app/zuno-release.jks
 
       - name: Make gradlew executable
         run: chmod +x gradlew
@@ -62,10 +52,12 @@ jobs:
           METROLIST_APPLICATION_ID: com.zuno.app
           METROLIST_APP_NAME: ZUNO
           # ------------------------------------
-          METROLIST_DEBUG_KEYSTORE_PATH: my-debug.keystore
-          METROLIST_DEBUG_KEYSTORE_PASSWORD: android
-          METROLIST_DEBUG_KEY_ALIAS: androiddebugkey
-          METROLIST_DEBUG_KEY_PASSWORD: android
+          METROLIST_DEBUG_KEYSTORE_PATH: zuno-release.jks
+          METROLIST_DEBUG_KEYSTORE_PASSWORD: ${{ secrets.ZUNO_KEYSTORE_PASSWORD }}
+          METROLIST_DEBUG_KEY_ALIAS: ${{ secrets.ZUNO_KEY_ALIAS }}
+          METROLIST_DEBUG_KEY_PASSWORD: ${{ secrets.ZUNO_KEY_PASSWORD }}
+          ZUNO_VERSION_CODE: ${{ 100 + github.run_number }}
+          ZUNO_VERSION_NAME: 1.${{ github.run_number }}
           PULL_REQUEST: "false"
           GITHUB_EVENT_NAME: ${{ github.event_name }}
 
@@ -75,3 +67,21 @@ jobs:
           name: zuno-apk
           path: app/build/outputs/apk/izzy/debug/*.apk
           if-no-files-found: error
+
+      - name: Print APK SHA-256 in job summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=$(find app/build/outputs/apk/izzy/debug -name '*.apk' -print -quit)
+          test -n "$apk"
+          sha=$(sha256sum "$apk" | awk '{print $1}')
+          {
+            echo '## ZUNO APK'
+            echo "- File: \`$(basename "$apk")\`"
+            echo "- SHA-256: \`$sha\`"
+            echo "- Version code: \`${{ 100 + github.run_number }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove signing material
+        if: always()
+        run: rm -f app/zuno-release.jks

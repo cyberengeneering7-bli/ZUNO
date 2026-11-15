@@ -20,6 +20,8 @@ val debugKeystorePathOverride = System.getenv("METROLIST_DEBUG_KEYSTORE_PATH")?.
 val debugKeystorePassword = System.getenv("METROLIST_DEBUG_KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() } ?: "android"
 val debugKeyAlias = System.getenv("METROLIST_DEBUG_KEY_ALIAS")?.takeIf { it.isNotBlank() } ?: "androiddebugkey"
 val debugKeyPassword = System.getenv("METROLIST_DEBUG_KEY_PASSWORD")?.takeIf { it.isNotBlank() } ?: "android"
+val zunoVersionCode = System.getenv("ZUNO_VERSION_CODE")?.toIntOrNull() ?: 28
+val zunoVersionName = System.getenv("ZUNO_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "0.9.2"
 val persistentDebugKeystoreFile = file("persistent-debug.keystore")
 val workflowDebugKeystoreFile = debugKeystorePathOverride?.let(::file)
 
@@ -40,8 +42,8 @@ android {
         applicationId = applicationIdOverride ?: "com.zuno.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 28
-        versionName = "0.9.2"
+        versionCode = zunoVersionCode
+        versionName = zunoVersionName
         val baseVersionName = requireNotNull(versionName)
         buildConfigField("String", "BASE_VERSION_NAME", "\"$baseVersionName\"")
         buildCommit?.let { versionName = "$baseVersionName+$it" }

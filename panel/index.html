@@ -237,13 +237,14 @@ const ICONS = {
   up: '<path d="M12 19V5"/><path d="M5 12l7-7 7 7"/>',
   down: '<path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/>',
   about: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/>',
-  note: '<path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4"/><path d="M9 12h6"/><path d="M9 16h6"/>'
+  note: '<path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4"/><path d="M9 12h6"/><path d="M9 16h6"/>',
+  updates: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>'
 };
 const icon = (n, size = 20) => `<svg class="ic" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ""}</svg>`;
 const TABS = [
   ["dashboard", "dashboard", "Dashboard"], ["banners", "banners", "Banners"], ["songs", "songs", "Songs"],
   ["categories", "categories", "Categories"], ["broken", "broken", "Broken songs"], ["users", "users", "Users"],
-  ["announcements", "announcements", "Announcements"], ["servers", "servers", "Together servers"], ["about", "about", "About page"], ["settings", "settings", "Settings"]
+  ["announcements", "announcements", "Announcements"], ["updates", "updates", "App update"], ["servers", "servers", "Together servers"], ["about", "about", "About page"], ["settings", "settings", "Settings"]
 ];
 function viewShell() {
   $("#root").innerHTML = `<div class="shell"><aside class="side"><div class="brand"><div class="logo"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6h12L6 18h12"/></svg></div>ZUNO Panel</div>
@@ -279,18 +280,25 @@ const VIEWS = {};
 VIEWS.dashboard = async () => {
   setMain(head("Dashboard") + `<div class="empty">Loading…</div>`);
   const d = n => new Date(Date.now() - n).toISOString();
-  const [total, online, day, week, newToday, blocked, songs, broken, banners, cats] = await Promise.all([
+  const [total, online, day, week, newToday, blocked, songs, broken, banners, cats, latestUpdate, deviceVersions] = await Promise.all([
     count("devices"), count("devices", q => q.gte("last_seen", d(5 * 60e3))), count("devices", q => q.gte("last_seen", d(864e5))),
     count("devices", q => q.gte("last_seen", d(7 * 864e5))), count("devices", q => q.gte("first_seen", d(864e5))),
     count("devices", q => q.eq("is_blocked", true)), count("songs", q => q.eq("is_active", true)),
     count("songs", q => q.or("auto_hidden.eq.true,broken_count.gt.0")), count("banners", q => q.eq("is_active", true)),
-    count("categories", q => q.eq("is_active", true))
+    count("categories", q => q.eq("is_active", true)),
+    ok(sb.from("app_updates").select("version_name,version_code").eq("is_active", true).order("version_code", { ascending: false }).limit(1)),
+    ok(sb.from("devices").select("app_version_code").not("app_version_code", "is", null).limit(1000))
   ]);
   const S = (n, l) => `<div class="stat"><b>${n}</b><span class="muted">${l}</span></div>`;
+  const latest = latestUpdate[0];
+  const versionCounts = Object.entries(deviceVersions.reduce((m, x) => { const k = x.app_version_code; m[k] = (m[k] || 0) + 1; return m; }, {})).sort((a, b) => Number(b[0]) - Number(a[0]));
   setMain(head("Dashboard", `<button class="btn ghost sm" data-a="refresh">Refresh</button>`) +
     `<div class="grid">${S(online, "Online now (5 min)")}${S(day, "Active 24h")}${S(week, "Active 7 days")}${S(newToday, "New today")}${S(total, "Total devices")}${S(blocked, "Blocked")}</div>
     <h3 style="margin:22px 0 10px">Content</h3>
     <div class="grid">${S(songs, "Live songs")}${S(broken, "Broken / reported")}${S(banners, "Active banners")}${S(cats, "Categories")}</div>
+    <h3 style="margin:22px 0 10px">App versions</h3>
+    <div class="grid">${S(latest ? latest.version_code : "—", "Latest version code")}${S(latest ? deviceVersions.filter(x => x.app_version_code === latest.version_code).length : 0, "Users on latest")}${S(latest ? deviceVersions.filter(x => x.app_version_code < latest.version_code).length : 0, "Users on older")}</div>
+    <div class="list" style="margin-top:12px">${versionCounts.length ? versionCounts.map(([v, n]) => `<div class="row"><div class="grow"><div class="t">Version code ${esc(v)}</div><div class="muted sm">${n} registered device(s)${latest && Number(v) < latest.version_code ? " · older" : ""}</div></div></div>`).join("") : `<div class="empty">Version-code data abhi nahi hai.</div>`}</div>
     <p class="muted sm" style="margin-top:18px">"Active" ka matlab device ne app kholi. Ye sirf random device ID hai, koi login ya token server pe nahi aata.</p>`);
 };
 A.refresh = () => VIEWS[tab]();
@@ -551,6 +559,40 @@ A.uBlock = d => modal("Block device", `<label>Reason (user ko dikhega)<input nam
 A.uUnblock = async d => { await ok(sb.from("devices").update({ is_blocked: false, block_reason: null }).eq("device_id", d.id)); VIEWS.users(); };
 A.uNote = d => { const u = window._users.find(x => x.device_id === d.id); modal("Note", `<label>Note (sirf tumhe dikhega)<input name="n" maxlength="120" value="${esc(u.note)}"></label>`,
   async v => { await ok(sb.from("devices").update({ note: v.n || null }).eq("device_id", d.id)); VIEWS.users(); }); };
+
+/* ================= App updates ================= */
+function updateForm(u = {}) {
+  return `<div class="two"><label>Version name<input name="version_name" required maxlength="30" value="${esc(u.version_name || "")}" placeholder="1.1"></label>
+  <label>Version code<input name="version_code" required type="number" min="1" value="${u.version_code || ""}"></label></div>
+  <label>APK URL (HTTPS, .apk)<input name="apk_url" required type="url" value="${esc(u.apk_url || "")}" placeholder="https://github.com/.../releases/download/.../ZUNO.apk"></label>
+  <label>SHA-256 (optional)<input name="sha256" pattern="[a-fA-F0-9]{64}" value="${esc(u.sha256 || "")}" placeholder="64 hexadecimal characters"></label>
+  <label>Release notes<textarea name="notes" maxlength="2000">${esc(u.notes || "")}</textarea></label>
+  <div class="two"><label>Minimum version code<input name="min_version_code" type="number" min="0" value="${u.min_version_code || 0}"></label>
+  <label class="chk" style="margin-top:28px"><input type="checkbox" name="force_update" ${u.force_update ? "checked" : ""}> Force update</label></div>`;
+}
+const updatePayload = (v, f) => ({ version_name: v.version_name.trim(), version_code: Number(v.version_code), apk_url: v.apk_url.trim(), sha256: (v.sha256 || "").trim().toLowerCase() || null, notes: (v.notes || "").trim(), force_update: chk(f, "force_update"), min_version_code: Number(v.min_version_code || 0), is_active: true });
+VIEWS.updates = async () => {
+  const rows = await ok(sb.from("app_updates").select("*").order("version_code", { ascending: false }));
+  window._updates = rows;
+  const latest = rows[0];
+  setMain(head("App update", `<button class="btn" data-a="updateAdd">+ Publish update</button>`) +
+    `<p class="muted sm" style="margin:-6px 0 14px">APK URL HTTPS aur .apk honi chahiye. Version code hamesha latest se bada rakho. Roll back newest release ko inactive karta hai.</p>
+    <div class="list">${rows.length ? rows.map(u => `<div class="row"><div class="grow"><div class="t">${esc(u.version_name)} <span class="muted sm">(code ${u.version_code})</span></div><div class="muted sm">${esc((u.notes || "").slice(0, 140))}</div><div><span class="badge ${u.is_active ? "on" : "off"}">${u.is_active ? "Active" : "Inactive"}</span>${u.force_update ? '<span class="badge off">forced</span>' : ""}${u.min_version_code ? `<span class="badge">min ${u.min_version_code}</span>` : ""}</div></div><div class="acts"><button class="btn ghost sm" data-a="uEdit" data-id="${u.id}">Edit</button>${u.is_active ? `<button class="btn ghost sm" data-a="uRollback" data-id="${u.id}">Roll back</button>` : ""}<button class="btn bad sm" data-a="uDel" data-id="${u.id}">Delete</button></div></div>`).join("") : '<div class="empty">Abhi koi app update publish nahi hua.</div>'}</div>`);
+};
+A.updateAdd = async () => {
+  const latest = window._updates[0];
+  const m = modal("Publish app update", updateForm({ version_code: latest ? latest.version_code + 1 : 101 }), async (v, f) => {
+    const p = updatePayload(v, f);
+    if (!/^https:\/\/.+\.apk(?:[?#].*)?$/i.test(p.apk_url)) throw new Error("APK URL HTTPS aur .apk hona chahiye");
+    if (latest && p.version_code <= latest.version_code) throw new Error("Version code latest se bada hona chahiye");
+    await ok(sb.from("app_updates").insert(p));
+    await ok(sb.from("app_updates").update({ is_active: false }).neq("version_code", p.version_code).eq("is_active", true));
+    toast("Update published"); VIEWS.updates();
+  });
+};
+A.uEdit = d => { const u = window._updates.find(x => x.id === d.id); const m = modal("Edit app update", updateForm(u), async (v, f) => { const p = updatePayload(v, f); if (!/^https:\/\/.+\.apk(?:[?#].*)?$/i.test(p.apk_url)) throw new Error("APK URL HTTPS aur .apk hona chahiye"); delete p.is_active; await ok(sb.from("app_updates").update(p).eq("id", u.id)); VIEWS.updates(); }); };
+A.uRollback = async d => { if (confirmBox("Is release ko inactive karke rollback karna hai?")) { await ok(sb.from("app_updates").update({ is_active: false }).eq("id", d.id)); toast("Rolled back"); VIEWS.updates(); } };
+A.uDel = async d => { if (confirmBox("Release delete karna hai?")) { await ok(sb.from("app_updates").delete().eq("id", d.id)); VIEWS.updates(); } };
 
 /* ================= Announcements ================= */
 VIEWS.announcements = async () => {

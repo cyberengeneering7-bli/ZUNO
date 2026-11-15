@@ -2,12 +2,8 @@ name: Migrate ZUNO signing key
 
 on:
   workflow_dispatch:
-  push:
-    branches: ["main"]
-    paths: [".github/workflows/make-key.yml"]
 
 permissions:
-  actions: write
   contents: read
 
 jobs:
@@ -24,13 +20,7 @@ jobs:
           path: app/my-debug.keystore
           key: zuno-debug-keystore-v1
 
-      - name: Store existing key as repository secrets
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EXISTING_ZUNO_KEYSTORE_BASE64: ${{ secrets.ZUNO_KEYSTORE_BASE64 }}
-          EXISTING_ZUNO_KEYSTORE_PASSWORD: ${{ secrets.ZUNO_KEYSTORE_PASSWORD }}
-          EXISTING_ZUNO_KEY_ALIAS: ${{ secrets.ZUNO_KEY_ALIAS }}
-          EXISTING_ZUNO_KEY_PASSWORD: ${{ secrets.ZUNO_KEY_PASSWORD }}
+      - name: Export existing key for manual secret storage
         run: |
           set -euo pipefail
           if [ ! -s app/my-debug.keystore ]; then
@@ -38,12 +28,18 @@ jobs:
             exit 1
           fi
           keytool -list -keystore app/my-debug.keystore -storepass android -alias androiddebugkey >/dev/null
-          if [ -n "$EXISTING_ZUNO_KEYSTORE_BASE64$EXISTING_ZUNO_KEYSTORE_PASSWORD$EXISTING_ZUNO_KEY_ALIAS$EXISTING_ZUNO_KEY_PASSWORD" ]; then
-            echo "::error::At least one target signing secret already exists. Refusing to overwrite any signing credentials."
-            exit 1
-          fi
-          base64 -w0 app/my-debug.keystore | gh secret set ZUNO_KEYSTORE_BASE64 --repo "$GITHUB_REPOSITORY"
-          printf '%s' 'android' | gh secret set ZUNO_KEYSTORE_PASSWORD --repo "$GITHUB_REPOSITORY"
-          printf '%s' 'androiddebugkey' | gh secret set ZUNO_KEY_ALIAS --repo "$GITHUB_REPOSITORY"
-          printf '%s' 'android' | gh secret set ZUNO_KEY_PASSWORD --repo "$GITHUB_REPOSITORY"
-          echo "Existing ZUNO signing material was migrated to repository Actions Secrets. The private key was not printed or uploaded as an artifact."
+          {
+            echo "ZUNO_KEYSTORE_BASE64=$(base64 -w0 app/my-debug.keystore)"
+            echo 'ZUNO_KEYSTORE_PASSWORD=android'
+            echo 'ZUNO_KEY_ALIAS=androiddebugkey'
+            echo 'ZUNO_KEY_PASSWORD=android'
+          } > zuno-signing-secrets.txt
+      - name: Upload one-time secret artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zuno-signing-secrets-one-time
+          path: zuno-signing-secrets.txt
+          retention-days: 1
+      - name: Remove key and exported secrets
+        if: always()
+        run: rm -f app/my-debug.keystore zuno-signing-secrets.txt

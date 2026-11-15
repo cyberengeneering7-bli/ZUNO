@@ -299,6 +299,7 @@ fun ZunoGate() {
     var announcementDismissed by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { state = ZunoPanel.checkGate(context) }
+    ZunoUpdateDialog()
 
     if (state.blocked) {
         AlertDialog(
