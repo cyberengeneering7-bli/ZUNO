@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -74,7 +73,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 
-private data class ZunoAppUpdate(
+data class ZunoAppUpdate(
     val versionName: String,
     val versionCode: Int,
     val apkUrl: String,
@@ -183,8 +182,8 @@ object ZunoUpdateManager {
         val archive = c.packageManager.getPackageArchiveInfo(apk.absolutePath, flags) ?: error("Invalid APK")
         check(archive.packageName == c.packageName) { "This APK is for a different app" }
         val installed = c.packageManager.getPackageInfo(c.packageName, flags)
-        val archiveSignatures = if (Build.VERSION.SDK_INT >= 28) archive.signingInfo.apkContentsSigners.map { it.toByteArray().toList() } else archive.signatures.map { it.toByteArray().toList() }
-        val installedSignatures = if (Build.VERSION.SDK_INT >= 28) installed.signingInfo.apkContentsSigners.map { it.toByteArray().toList() } else installed.signatures.map { it.toByteArray().toList() }
+        val archiveSignatures = if (Build.VERSION.SDK_INT >= 28) archive.signingInfo?.apkContentsSigners?.map { it.toByteArray().toList() } ?: emptyList() else archive.signatures?.map { it.toByteArray().toList() } ?: emptyList()
+        val installedSignatures = if (Build.VERSION.SDK_INT >= 28) installed.signingInfo?.apkContentsSigners?.map { it.toByteArray().toList() } ?: emptyList() else installed.signatures?.map { it.toByteArray().toList() } ?: emptyList()
         check(archiveSignatures.any { it in installedSignatures }) { "APK signing certificate does not match" }
         apk
     }
@@ -238,7 +237,7 @@ private fun UpdateCard(state: UpdateUiState, force: Boolean, onLater: () -> Unit
     val transition = rememberInfiniteTransition(label = "update-blobs")
     val drift by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(8000), RepeatMode.Reverse), label = "blob")
     Box(Modifier.fillMaxWidth().padding(20.dp).clip(RoundedCornerShape(28.dp)).background(Brush.linearGradient(listOf(Color(0xFF24151B), Color(0xFF121216)))).padding(24.dp)) {
-        Box(Modifier.matchParentSize().alpha(.20f).background(Brush.radialGradient(listOf(Color(0xFFFF6B4A), Color.Transparent), radius = 220f, center = androidx.compose.ui.geometry.Offset(120f + drift * 80f, 20f))))
+        Box(Modifier.fillMaxSize().alpha(.20f).background(Brush.radialGradient(listOf(Color(0xFFFF6B4A), Color.Transparent), radius = 220f, center = androidx.compose.ui.geometry.Offset(120f + drift * 80f, 20f))))
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             androidx.compose.foundation.Image(painterResource(R.drawable.zuno_logo), "ZUNO logo", Modifier.size(72.dp).clip(CircleShape))
             Text("New version available", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
