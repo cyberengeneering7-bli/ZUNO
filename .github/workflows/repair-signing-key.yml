@@ -1,0 +1,46 @@
+name: Repair ZUNO signing secrets
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore original signing key cache
+        uses: actions/cache/restore@v4
+        with:
+          path: app/my-debug.keystore
+          key: zuno-debug-keystore-v1
+
+      - name: Verify original signing key
+        run: |
+          set -euo pipefail
+          test -s app/my-debug.keystore
+          keytool -list \
+            -keystore app/my-debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            >/dev/null
+
+      - name: Rewrite repository signing secrets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          base64 -w0 app/my-debug.keystore | gh secret set ZUNO_KEYSTORE_BASE64 --repo "$GITHUB_REPOSITORY"
+          printf '%s' 'android' | gh secret set ZUNO_KEYSTORE_PASSWORD --repo "$GITHUB_REPOSITORY"
+          printf '%s' 'androiddebugkey' | gh secret set ZUNO_KEY_ALIAS --repo "$GITHUB_REPOSITORY"
+          printf '%s' 'android' | gh secret set ZUNO_KEY_PASSWORD --repo "$GITHUB_REPOSITORY"
+          echo 'Signing secrets repaired from the original cached key.'
+
+      - name: Remove restored key
+        if: always()
+        run: rm -f app/my-debug.keystore
