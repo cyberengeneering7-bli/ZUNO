@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -125,7 +126,7 @@ private fun ZunoBannerCard(
                 .build()
         }
     val imagePainter = rememberAsyncImagePainter(model = imageRequest)
-    val imageState = imagePainter.state
+    val imageState by imagePainter.state.collectAsState()
     val hasLoadedImage = imageUrl != null && imageState is AsyncImagePainter.State.Success
     val isLoadingImage =
         imageUrl != null &&
