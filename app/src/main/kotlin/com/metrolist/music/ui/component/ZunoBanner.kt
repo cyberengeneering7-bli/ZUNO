@@ -1,10 +1,13 @@
 package com.metrolist.music.ui.component
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -29,9 +33,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import coil3.compose.rememberAsyncImagePainter
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
+import com.metrolist.music.ui.component.shimmer.ShimmerHost
 
 /**
  * ZUNO home banner (data panel se aata hai).
@@ -107,6 +113,25 @@ private fun ZunoBannerCard(
 ) {
     val context = LocalContext.current
     val shape = RoundedCornerShape(32.dp)
+    val imageUrl = banner.imageUrl?.takeIf { it.isNotBlank() }
+    val imageRequest =
+        remember(imageUrl) {
+            ImageRequest
+                .Builder(context)
+                .data(imageUrl)
+                .memoryCachePolicy(CachePolicy.ENABLED)
+                .diskCachePolicy(CachePolicy.ENABLED)
+                .networkCachePolicy(CachePolicy.ENABLED)
+                .build()
+        }
+    val imagePainter = rememberAsyncImagePainter(model = imageRequest)
+    val imageState = imagePainter.state
+    val hasLoadedImage = imageUrl != null && imageState is AsyncImagePainter.State.Success
+    val isLoadingImage =
+        imageUrl != null &&
+            imageState !is AsyncImagePainter.State.Success &&
+            imageState !is AsyncImagePainter.State.Error
+
     Box(
         modifier =
             modifier
@@ -114,25 +139,15 @@ private fun ZunoBannerCard(
                 .background(Brush.linearGradient(listOf(banner.colorStart, banner.colorEnd)))
                 .clickable(onClick = onClick),
     ) {
-        if (banner.imageUrl != null) {
-            AsyncImage(
-                model =
-                    remember(banner.imageUrl) {
-                        ImageRequest
-                            .Builder(context)
-                            .data(banner.imageUrl)
-                            .memoryCachePolicy(CachePolicy.ENABLED)
-                            .diskCachePolicy(CachePolicy.ENABLED)
-                            .networkCachePolicy(CachePolicy.ENABLED)
-                            .build()
-                    },
+        if (hasLoadedImage) {
+            Image(
+                painter = imagePainter,
                 contentDescription = banner.title,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
         }
 
-        // Neeche gehra scrim, taaki text saaf padhe
         Box(
             modifier =
                 Modifier
@@ -145,25 +160,6 @@ private fun ZunoBannerCard(
                                     1f to Color(0xD9000000),
                                 ),
                         ),
-                    ),
-        )
-
-        // Glass border
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .border(
-                        width = 1.dp,
-                        brush =
-                            Brush.linearGradient(
-                                listOf(
-                                    Color.White.copy(alpha = 0.40f),
-                                    Color.White.copy(alpha = 0.12f),
-                                    Color.White.copy(alpha = 0.28f),
-                                ),
-                            ),
-                        shape = shape,
                     ),
         )
 
@@ -192,5 +188,54 @@ private fun ZunoBannerCard(
                 )
             }
         }
+
+        if (isLoadingImage) {
+            ShimmerHost(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .clip(shape)
+                        .background(Color(0xFF25252D)),
+                verticalArrangement = Arrangement.Bottom,
+                showGradient = false,
+            ) {
+                Spacer(
+                    modifier =
+                        Modifier
+                            .padding(start = 20.dp, end = 130.dp)
+                            .fillMaxWidth()
+                            .height(26.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.White.copy(alpha = 0.24f)),
+                )
+                Spacer(
+                    modifier =
+                        Modifier
+                            .padding(start = 20.dp, end = 190.dp, top = 12.dp, bottom = 22.dp)
+                            .fillMaxWidth()
+                            .height(18.dp)
+                            .clip(RoundedCornerShape(7.dp))
+                            .background(Color.White.copy(alpha = 0.16f)),
+                )
+            }
+        }
+
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .border(
+                        width = 1.dp,
+                        brush =
+                            Brush.linearGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.40f),
+                                    Color.White.copy(alpha = 0.12f),
+                                    Color.White.copy(alpha = 0.28f),
+                                ),
+                            ),
+                        shape = shape,
+                    ),
+        )
     }
 }
