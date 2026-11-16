@@ -308,7 +308,7 @@ VIEWS.banners = async () => {
   const rows = await ok(sb.from("banners").select("*").order("is_pinned", { ascending: false }).order("sort_order").order("created_at", { ascending: false }));
   window._banners = rows;
   const activeCount = rows.filter(b => b.is_active).length;
-  setMain(head("Banners", `<span class="badge ${activeCount > 20 ? "off" : "on"}">${activeCount} / 20 visible</span><button class="btn" data-a="bannerAdd">+ Add banner</button>`) +
+  setMain(head("Banners", `<span class="badge ${activeCount > 20 ? "off" : "on"}">${activeCount} / 20 visible</span><button class="btn ghost" data-a="bannerSeed">Add 15 starter songs</button><button class="btn" data-a="bannerAdd">+ Add banner</button>`) +
     `<p class="muted sm" style="margin:-6px 0 14px">App mein <b>sabse zyada 20</b> banner dikhte hain (Pinned pehle, phir order ke hisaab se). Image <b>lagbhag square</b> rakho (1080×1150 best), kyunki card lagbhag square hai aur kinaron se thoda kat sakta hai. Slide karne par patti khidki ke palle ki tarah khulti hai.</p>
     <div class="list">${rows.length ? rows.map(b => `<div class="row">
       ${b.image_url ? `<img class="bthumb" src="${esc(b.image_url)}" alt="">` : `<div class="bthumb"></div>`}
@@ -353,8 +353,15 @@ function bannerPayload(v, f) {
     action_type: v.action_type, action_value: val, starts_at: fromLocalInput(v.starts_at), ends_at: fromLocalInput(v.ends_at),
     sort_order: parseInt(v.sort_order || 0, 10) || 0, is_pinned: chk(f, "is_pinned"), is_active: chk(f, "is_active") };
 }
+A.bannerSeed = async () => {
+  const active = window._banners.filter(b => b.is_active).length;
+  if (active + 15 > 20) throw new Error("Starter pack ke liye kam se kam 15 visible slots chahiye");
+  const songs = [["Jai Ho","8xvJY8g9g4U"],["Shape of You","JGwWNGJdvx8"],["Despacito","kJQP7kiw5Fk"],["Blinding Lights","4NRXx6U8ABQ"],["Perfect","2Vv-BfVoq4g"],["Believer","7wtfhZwyrcc"],["Faded","60ItHLz5WEA"],["Closer","PT2_F-1esPs"],["Senorita","Pkh8UtuejGw"],["Heat Waves","mRD0-GxqHVo"],["Stay","kTJczUoc26U"],["Levitating","TUVcZfQe-Kw"],["Lovely","V1Pl8CzNzCw"],["Havana","BQ0mxQXmLsk"],["Attention","nfs8NYg7yQM"]];
+  const rows = songs.map(([title, video_id], i) => ({ title, subtitle: "ZUNO picks", image_url: ytThumb(video_id), action_type: "song", action_value: video_id, is_pinned: i < 3, is_active: true, sort_order: i * 10 }));
+  await ok(sb.from("banners").insert(rows)); toast("15 starter song banners add ho gaye"); VIEWS.banners();
+};
 A.bannerAdd = () => {
-  if (window._banners.filter(b => b.is_active).length >= 20) toast("20 visible banner ho gaye. Naya banner visible rakhne ke liye pehle koi hide ya delete karo.", true);
+  if (window._banners.filter(b => b.is_active).length >= 20) return toast("20 visible banner ho gaye. Naya banner visible rakhne ke liye pehle koi hide ya delete karo.", true);
   const m = modal("New banner", bannerForm(), async (v, f) => { await ok(sb.from("banners").insert(bannerPayload(v, f))); toast("Banner added"); VIEWS.banners(); }); bannerWire(m); };
 A.bEdit = d => { const b = window._banners.find(x => x.id === d.id); const m = modal("Edit banner", bannerForm(b), async (v, f) => { await ok(sb.from("banners").update(bannerPayload(v, f)).eq("id", b.id)); toast("Saved"); VIEWS.banners(); }); bannerWire(m); };
 A.bDel = async d => { if (confirmBox("Ye banner delete karna hai?")) { await ok(sb.from("banners").delete().eq("id", d.id)); toast("Deleted"); VIEWS.banners(); } };
@@ -612,7 +619,11 @@ function annForm(a = {}) {
   <label class="chk"><input type="checkbox" name="show_once" ${a.show_once === false ? "" : "checked"}> Ek baar hi dikhao</label>
   <label class="chk"><input type="checkbox" name="is_active" ${a.is_active === false ? "" : "checked"}> Active</label>`;
 }
-const annPayload = (v, f) => ({ title: v.title.trim(), body: (v.body || "").trim(), link_url: (v.link_url || "").trim() || null, expires_at: fromLocalInput(v.expires_at), show_once: chk(f, "show_once"), is_active: chk(f, "is_active") });
+const annPayload = (v, f) => {
+  const link = (v.link_url || "").trim();
+  if (link && !/^https:\/\//i.test(link)) throw new Error("Notification link sirf https:// hona chahiye");
+  return { title: v.title.trim(), body: (v.body || "").trim(), link_url: link || null, expires_at: fromLocalInput(v.expires_at), show_once: chk(f, "show_once"), is_active: chk(f, "is_active") };
+};
 A.annAdd = () => modal("New announcement", annForm(), async (v, f) => { await ok(sb.from("announcements").insert(annPayload(v, f))); VIEWS.announcements(); });
 A.annEdit = d => { const a = window._ann.find(x => x.id === d.id); modal("Edit announcement", annForm(a), async (v, f) => { await ok(sb.from("announcements").update(annPayload(v, f)).eq("id", a.id)); VIEWS.announcements(); }); };
 A.annToggle = async d => { const a = window._ann.find(x => x.id === d.id); await ok(sb.from("announcements").update({ is_active: !a.is_active }).eq("id", d.id)); VIEWS.announcements(); };

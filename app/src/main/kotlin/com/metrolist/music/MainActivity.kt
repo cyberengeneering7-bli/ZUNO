@@ -1111,10 +1111,10 @@ class MainActivity : FragmentActivity() {
                                         },
                                         actions = {
                                             if (showHistoryButton) {
-                                                IconButton(onClick = { navController.navigate("history") }) {
+                                                IconButton(onClick = { navController.navigate("zuno_notifications") }) {
                                                     Icon(
-                                                        painter = painterResource(R.drawable.history),
-                                                        contentDescription = stringResource(R.string.history),
+                                                        painter = painterResource(R.drawable.notification),
+                                                        contentDescription = "Notifications",
                                                     )
                                                 }
                                             }

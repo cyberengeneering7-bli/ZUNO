@@ -46,6 +46,7 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.metrolist.innertube.models.WatchEndpoint
 import com.metrolist.music.LocalPlayerConnection
+import com.metrolist.music.BuildConfig
 import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.playback.PlayerConnection
 import com.metrolist.music.playback.queues.YouTubeQueue
@@ -81,6 +82,35 @@ private val bannerPalette =
         Color(0xFF1FB5A5) to Color(0xFF3A5BD9),
         Color(0xFFFFB020) to Color(0xFFE8504A),
     )
+
+private val builtInSongBanners = listOf(
+    "Jai Ho" to "8xvJY8g9g4U",
+    "Shape of You" to "JGwWNGJdvx8",
+    "Despacito" to "kJQP7kiw5Fk",
+    "Blinding Lights" to "4NRXx6U8ABQ",
+    "Perfect" to "2Vv-BfVoq4g",
+    "Believer" to "7wtfhZwyrcc",
+    "Faded" to "60ItHLz5WEA",
+    "Closer" to "PT2_F-1esPs",
+    "Senorita" to "Pkh8UtuejGw",
+    "Heat Waves" to "mRD0-GxqHVo",
+    "Stay" to "kTJczUoc26U",
+    "Levitating" to "TUVcZfQe-Kw",
+    "Lovely" to "V1Pl8CzNzCw",
+    "Havana" to "BQ0mxQXmLsk",
+    "Attention" to "nfs8NYg7yQM",
+).mapIndexed { index, (title, videoId) ->
+    ZunoRemoteBanner(
+        id = "built-in-song-$videoId",
+        title = title,
+        subtitle = "ZUNO picks",
+        imageUrl = "https://i.ytimg.com/vi/$videoId/hqdefault.jpg",
+        actionType = "song",
+        actionValue = videoId,
+        isPinned = index < 3,
+        sortOrder = index,
+    )
+}
 
 /** Home ke upar ke banners. Pehle cache (turant), phir internet se naya. */
 @Composable
@@ -125,6 +155,7 @@ fun ZunoHomeBanners(
                     )
                 })
                 addAll(remote.filterNot { it.isPinned })
+                if (isEmpty()) addAll(builtInSongBanners)
             }.distinctBy { banner ->
                 if (banner.actionType == "song") "song:${banner.actionValue}" else "banner:${banner.id}"
             }.take(20)
@@ -299,7 +330,9 @@ fun ZunoGate() {
     var announcementDismissed by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { state = ZunoPanel.checkGate(context) }
-    ZunoUpdateDialog()
+    if (BuildConfig.UPDATER_AVAILABLE) {
+        ZunoUpdateDialog()
+    }
 
     if (state.blocked) {
         AlertDialog(

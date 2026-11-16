@@ -128,6 +128,10 @@ fun NavGraphBuilder.navigationBuilder(
         HistoryScreen(navController)
     }
 
+    composable("zuno_notifications") {
+        ZunoNotificationsScreen(navController)
+    }
+
     composable("stats") {
         StatsScreen(navController)
     }

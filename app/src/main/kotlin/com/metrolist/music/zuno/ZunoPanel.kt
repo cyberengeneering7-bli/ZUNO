@@ -416,6 +416,29 @@ object ZunoPanel {
     }
 
     // ---------------------------------------------------------------- gate (block / maintenance / announcement)
+    suspend fun fetchAnnouncements(c: Context): List<ZunoAnnouncement> {
+        return try {
+            val raw = request(
+                "GET",
+                "/rest/v1/announcements?select=*&is_active=eq.true&order=created_at.desc&limit=30",
+            ) ?: return emptyList()
+            val now = Instant.now()
+            val arr = JSONArray(raw)
+            buildList {
+                for (i in 0 until arr.length()) {
+                    val o = arr.getJSONObject(i)
+                    val expiresAt = o.str("expires_at")
+                    val notExpired = expiresAt.isNullOrBlank() || !OffsetDateTime.parse(expiresAt).toInstant().isBefore(now)
+                    if (notExpired) {
+                        add(ZunoAnnouncement(o.optString("id"), o.optString("title"), o.str("body").orEmpty(), o.str("link_url")))
+                    }
+                }
+            }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
     suspend fun checkGate(c: Context): ZunoGateState {
         if (!ZunoPanelConfig.isConfigured) return ZunoGateState()
         var blocked = false

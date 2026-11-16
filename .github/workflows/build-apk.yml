@@ -1,8 +1,5 @@
 name: Build APK
 
-# Chalane ke 2 tareeke:
-#  1) Code main branch pe push karo -> apne aap build
-#  2) GitHub -> Actions -> "Build APK" -> "Run workflow" (manual)
 on:
   workflow_dispatch:
   push:
@@ -18,8 +15,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,109 +26,75 @@ jobs:
           java-version: "21"
           distribution: "temurin"
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platforms;android-37 build-tools;35.0.0"
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Normalize migrated signing secrets
+      - name: Decode and validate permanent signing key
         env:
-          RAW_ZUNO_KEYSTORE_BASE64: ${{ secrets.ZUNO_KEYSTORE_BASE64 }}
-          RAW_ZUNO_KEYSTORE_PASSWORD: ${{ secrets.ZUNO_KEYSTORE_PASSWORD }}
-          RAW_ZUNO_KEY_ALIAS: ${{ secrets.ZUNO_KEY_ALIAS }}
-          RAW_ZUNO_KEY_PASSWORD: ${{ secrets.ZUNO_KEY_PASSWORD }}
+          ZUNO_KEYSTORE_BASE64: ${{ secrets.ZUNO_KEYSTORE_BASE64 }}
+          ZUNO_KEYSTORE_PASSWORD: ${{ secrets.ZUNO_KEYSTORE_PASSWORD }}
+          ZUNO_KEY_ALIAS: ${{ secrets.ZUNO_KEY_ALIAS }}
+          ZUNO_KEY_PASSWORD: ${{ secrets.ZUNO_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          normalize() {
-            local name="$1"
-            local value="$2"
-            case "$value" in
-              "$name="*) value="${value#"$name="}" ;;
-            esac
-            printf '%s' "$value" | tr -d '[:space:]'
-          }
-          keystore_base64=$(normalize ZUNO_KEYSTORE_BASE64 "$RAW_ZUNO_KEYSTORE_BASE64")
-          keystore_password=$(normalize ZUNO_KEYSTORE_PASSWORD "$RAW_ZUNO_KEYSTORE_PASSWORD")
-          key_alias=$(normalize ZUNO_KEY_ALIAS "$RAW_ZUNO_KEY_ALIAS")
-          key_password=$(normalize ZUNO_KEY_PASSWORD "$RAW_ZUNO_KEY_PASSWORD")
-          test -n "$keystore_base64"
-          test -n "$keystore_password"
-          test -n "$key_alias"
-          test -n "$key_password"
-          echo "::add-mask::$keystore_base64"
-          echo "::add-mask::$keystore_password"
-          echo "::add-mask::$key_alias"
-          echo "::add-mask::$key_password"
-          {
-            printf 'ZUNO_KEYSTORE_BASE64=%s\n' "$keystore_base64"
-            printf 'ZUNO_KEYSTORE_PASSWORD=%s\n' "$keystore_password"
-            printf 'ZUNO_KEY_ALIAS=%s\n' "$key_alias"
-            printf 'ZUNO_KEY_PASSWORD=%s\n' "$key_password"
-          } >> "$GITHUB_ENV"
-
-      - name: Decode permanent signing key
-        run: |
-          set -euo pipefail
+          test -n "$ZUNO_KEYSTORE_BASE64"
+          test -n "$ZUNO_KEYSTORE_PASSWORD"
+          test -n "$ZUNO_KEY_ALIAS"
+          test -n "$ZUNO_KEY_PASSWORD"
           printf '%s' "$ZUNO_KEYSTORE_BASE64" | base64 --decode > app/zuno-release.jks
           test -s app/zuno-release.jks
-
-      - name: Verify permanent signing key
-        run: |
-          set -euo pipefail
-          keytool -list -v \
-            -keystore app/zuno-release.jks \
-            -storepass "$ZUNO_KEYSTORE_PASSWORD" \
-            -alias "$ZUNO_KEY_ALIAS" \
-            -keypass "$ZUNO_KEY_PASSWORD" \
-            >/dev/null
-
-      - name: Calculate build version
-        id: version
-        shell: bash
-        run: |
-          set -euo pipefail
-          version_code=$((100 + GITHUB_RUN_NUMBER))
-          version_name="1.${GITHUB_RUN_NUMBER}"
-          echo "version_code=$version_code" >> "$GITHUB_OUTPUT"
-          echo "version_name=$version_name" >> "$GITHUB_OUTPUT"
+          keytool -list -keystore app/zuno-release.jks -storepass "$ZUNO_KEYSTORE_PASSWORD" -alias "$ZUNO_KEY_ALIAS" >/dev/null
 
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Build APK
-        run: ./gradlew --console=plain assembleIzzyDebug -x lint --warning-mode summary
+      - name: Run unit tests
+        run: ./gradlew --console=plain :app:testFossDebugUnitTest :innertube:test --warning-mode summary
+
+      - name: Run lint
+        run: ./gradlew --console=plain :app:lintFossRelease --warning-mode summary
+
+      - name: Build signed updater-enabled FOSS release
+        run: ./gradlew --console=plain assembleFossRelease --warning-mode summary
         env:
-          # ---- YAHAN APNA NAAM / ID BADLO ----
           METROLIST_APPLICATION_ID: com.zuno.app
           METROLIST_APP_NAME: ZUNO
-          # ------------------------------------
-          METROLIST_DEBUG_KEYSTORE_PATH: zuno-release.jks
-          METROLIST_DEBUG_KEYSTORE_PASSWORD: ${{ secrets.ZUNO_KEYSTORE_PASSWORD }}
-          METROLIST_DEBUG_KEY_ALIAS: ${{ secrets.ZUNO_KEY_ALIAS }}
-          METROLIST_DEBUG_KEY_PASSWORD: ${{ secrets.ZUNO_KEY_PASSWORD }}
-          ZUNO_VERSION_CODE: ${{ steps.version.outputs.version_code }}
-          ZUNO_VERSION_NAME: ${{ steps.version.outputs.version_name }}
+          METROLIST_RELEASE_KEYSTORE_PATH: zuno-release.jks
+          STORE_PASSWORD: ${{ secrets.ZUNO_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ZUNO_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ZUNO_KEY_PASSWORD }}
+          ZUNO_VERSION_CODE: ${{ 100 + github.run_number }}
+          ZUNO_VERSION_NAME: 1.${{ github.run_number }}
           PULL_REQUEST: "false"
           GITHUB_EVENT_NAME: ${{ github.event_name }}
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: zuno-apk
-          path: app/build/outputs/apk/izzy/debug/*.apk
-          if-no-files-found: error
-
-      - name: Print APK SHA-256 in job summary
+      - name: Verify APK identity and signature
         shell: bash
         run: |
           set -euo pipefail
-          apk=$(find app/build/outputs/apk/izzy/debug -name '*.apk' -print -quit)
+          apk=$(find app/build/outputs/apk/foss/release -name '*.apk' -print -quit)
           test -n "$apk"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$apk"
           sha=$(sha256sum "$apk" | awk '{print $1}')
           {
-            echo '## ZUNO APK'
+            echo '## ZUNO signed FOSS release APK'
             echo "- File: \`$(basename "$apk")\`"
             echo "- SHA-256: \`$sha\`"
-            echo "- Version code: \`${{ steps.version.outputs.version_code }}\`"
+            echo "- Version code: \`${{ 100 + github.run_number }}\`"
+            echo '- Flavor: `fossRelease` (updater enabled, non-debug)'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload signed APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: zuno-foss-release-apk
+          path: app/build/outputs/apk/foss/release/*.apk
+          if-no-files-found: error
 
       - name: Remove signing material
         if: always()

@@ -123,6 +123,7 @@ private fun ZunoBannerCard(
             ImageRequest
                 .Builder(context)
                 .data(imageUrl)
+                .crossfade(true)
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .diskCachePolicy(CachePolicy.ENABLED)
                 .networkCachePolicy(CachePolicy.ENABLED)
@@ -151,6 +152,7 @@ private fun ZunoBannerCard(
         modifier =
             modifier
                 .fillMaxSize()
+                .clip(shape)
                 .background(Brush.linearGradient(listOf(banner.colorStart, banner.colorEnd)))
                 .clickable(onClick = onClick),
     ) {
@@ -207,10 +209,18 @@ private fun ZunoBannerCard(
         if (isLoadingImage) {
             ShimmerHost(
                 modifier =
-                    Modifier
+                Modifier
                         .fillMaxSize()
                         .clip(shape)
-                        .background(Color(0xFF25252D)),
+                        .background(
+                            Brush.linearGradient(
+                                listOf(
+                                    banner.colorStart.copy(alpha = 0.72f),
+                                    banner.colorEnd.copy(alpha = 0.72f),
+                                    Color(0xFF17171D),
+                                ),
+                            ),
+                        ),
                 verticalArrangement = Arrangement.Bottom,
                 showGradient = false,
             ) {
