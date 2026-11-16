@@ -155,7 +155,9 @@ fun ZunoHomeBanners(
                     )
                 })
                 addAll(remote.filterNot { it.isPinned })
-                if (isEmpty()) addAll(builtInSongBanners)
+                // Remote/admin content stays first; built-ins fill the remaining
+                // slots so a partially populated panel does not hide defaults.
+                if (size < 15) addAll(builtInSongBanners)
             }.distinctBy { banner ->
                 if (banner.actionType == "song") "song:${banner.actionValue}" else "banner:${banner.id}"
             }.take(20)

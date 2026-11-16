@@ -1,5 +1,6 @@
 package com.metrolist.music.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -25,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -39,6 +41,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun ZunoNotificationsScreen(navController: NavController) {
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     var notifications by remember { mutableStateOf<List<ZunoAnnouncement>>(emptyList()) }
     var loaded by remember { mutableStateOf(false) }
 
@@ -81,7 +84,15 @@ fun ZunoNotificationsScreen(navController: NavController) {
             ) {
                 items(notifications, key = { it.id }) { notification ->
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (!notification.linkUrl.isNullOrBlank() && notification.linkUrl.startsWith("https://")) {
+                                    Modifier.clickable { runCatching { uriHandler.openUri(notification.linkUrl) } }
+                                } else {
+                                    Modifier
+                                },
+                            ),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                     ) {
                         Column(modifier = Modifier.padding(18.dp)) {
@@ -91,6 +102,14 @@ fun ZunoNotificationsScreen(navController: NavController) {
                                     notification.body,
                                     style = MaterialTheme.typography.bodyLarge,
                                     modifier = Modifier.padding(top = 8.dp),
+                                )
+                            }
+                            if (!notification.linkUrl.isNullOrBlank() && notification.linkUrl.startsWith("https://")) {
+                                Text(
+                                    "Open details",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    modifier = Modifier.padding(top = 12.dp),
                                 )
                             }
                         }
