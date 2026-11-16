@@ -70,7 +70,6 @@ import androidx.graphics.shapes.RoundedPolygon
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.metrolist.innertube.models.WatchEndpoint
-import com.metrolist.music.BuildConfig
 import com.metrolist.music.LocalPlayerAwareWindowInsets
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
@@ -410,24 +409,6 @@ fun AboutScreen(
             
                     Spacer(Modifier.height(8.dp))
             
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.secondaryContainer
-                    ) {
-                        val archText = BuildConfig.ARCHITECTURE.uppercase()
-                        val versionText = if (BuildConfig.DEBUG) {
-                            stringResource(R.string.app_version_info, BuildConfig.VERSION_NAME, "$archText • DEBUG")
-                        } else {
-                            stringResource(R.string.app_version_info, BuildConfig.VERSION_NAME, archText)
-                        }
-                        Text(
-                            text = versionText,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        )
-                    }
                 }
             }
     

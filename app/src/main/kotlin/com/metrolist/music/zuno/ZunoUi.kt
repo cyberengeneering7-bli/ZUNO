@@ -72,6 +72,8 @@ fun playZunoSong(
             ),
         ),
     )
+    ZunoPanel.rememberRecentSong(context, song)
+    ZunoPanelState.recentSongs.value = ZunoPanel.cachedRecentSongs(context)
     ZunoPanel.reportSongPlay(context, song.videoId)
 }
 
@@ -125,10 +127,13 @@ fun ZunoHomeBanners(
     LaunchedEffect(Unit) { ZunoPanelState.refresh(context) }
     val remote by ZunoPanelState.banners.collectAsStateWithLifecycle()
     val topSongs by ZunoPanelState.topSongs.collectAsStateWithLifecycle()
+    val recentSongs by ZunoPanelState.recentSongs.collectAsStateWithLifecycle()
 
     val banners =
-        remember(remote, topSongs) {
+        remember(remote, topSongs, recentSongs) {
             val ordered = buildList {
+                // Jo song user play karta hai woh turant recent banner ban jata hai.
+                addAll(recentSongs)
                 addAll(topSongs.filter { it.isPinnedBanner }.map { song ->
                     ZunoRemoteBanner(
                         id = "pinned-song:${song.videoId}",

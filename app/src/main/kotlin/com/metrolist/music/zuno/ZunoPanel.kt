@@ -99,6 +99,8 @@ private fun JSONObject.str(name: String): String? = if (isNull(name)) null else 
 object ZunoPanel {
     private const val PREFS = "zuno_panel"
     private const val PENDING_PLAYS_KEY = "pending_song_plays"
+    private const val RECENT_SONGS_KEY = "recent_songs"
+    private const val MAX_RECENT_SONGS = 20
     private const val MAX_PENDING_PLAYS = 60
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val reported = HashSet<String>()
@@ -260,6 +262,33 @@ object ZunoPanel {
     }
 
     fun cachedTopSongs(c: Context): List<ZunoRemoteSong> = parseSongs(prefs(c).getString("top_songs", null))
+
+    fun cachedRecentSongs(c: Context): List<ZunoRemoteSong> = parseSongs(prefs(c).getString(RECENT_SONGS_KEY, null))
+
+    /** Har locally played ZUNO song ko banner carousel ke liye yaad rakhta hai. */
+    fun rememberRecentSong(c: Context, song: ZunoRemoteSong) {
+        if (song.videoId.isBlank()) return
+        val updated = buildList {
+            add(song)
+            addAll(cachedRecentSongs(c).filterNot { it.videoId == song.videoId })
+        }.take(MAX_RECENT_SONGS)
+        val json = JSONArray().apply {
+            updated.forEach { item ->
+                put(
+                    JSONObject()
+                        .put("video_id", item.videoId)
+                        .put("title", item.title)
+                        .put("artist", item.artist)
+                        .put("cover_url", item.coverUrl ?: "")
+                        .put("tags", JSONArray().apply { item.tags.forEach(::put) })
+                        .put("sort_order", 0)
+                        .put("is_pinned_banner", false)
+                        .put("play_count", 0),
+                )
+            }
+        }
+        prefs(c).edit().putString(RECENT_SONGS_KEY, json.toString()).apply()
+    }
 
     suspend fun refreshTopSongs(c: Context): List<ZunoRemoteSong>? {
         val raw =
@@ -537,6 +566,7 @@ object ZunoPanelState {
     val banners = MutableStateFlow<List<ZunoRemoteBanner>>(emptyList())
     val songs = MutableStateFlow<List<ZunoRemoteSong>>(emptyList())
     val topSongs = MutableStateFlow<List<ZunoRemoteSong>>(emptyList())
+    val recentSongs = MutableStateFlow<List<ZunoRemoteSong>>(emptyList())
     val aboutLinks = MutableStateFlow<List<ZunoAboutLink>>(emptyList())
     val aboutInfo = MutableStateFlow(ZunoAboutInfo())
     private var initialised = false
@@ -547,6 +577,7 @@ object ZunoPanelState {
         banners.value = ZunoPanel.cachedBanners(c)
         songs.value = ZunoPanel.cachedSongs(c)
         topSongs.value = ZunoPanel.cachedTopSongs(c)
+        recentSongs.value = ZunoPanel.cachedRecentSongs(c)
         aboutLinks.value = ZunoPanel.cachedAboutLinks(c)
         aboutInfo.value = ZunoPanel.cachedAboutInfo(c)
     }
