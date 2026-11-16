@@ -133,7 +133,18 @@ fun ZunoHomeBanners(
         remember(remote, topSongs, recentSongs) {
             val ordered = buildList {
                 // Jo song user play karta hai woh turant recent banner ban jata hai.
-                addAll(recentSongs)
+                addAll(recentSongs.map { song ->
+                    ZunoRemoteBanner(
+                        id = "recent-song:${song.videoId}",
+                        title = song.title,
+                        subtitle = song.artist,
+                        imageUrl = song.coverUrl ?: "https://i.ytimg.com/vi/${song.videoId}/hqdefault.jpg",
+                        actionType = "song",
+                        actionValue = song.videoId,
+                        isPinned = false,
+                        sortOrder = -1,
+                    )
+                })
                 addAll(topSongs.filter { it.isPinnedBanner }.map { song ->
                     ZunoRemoteBanner(
                         id = "pinned-song:${song.videoId}",
