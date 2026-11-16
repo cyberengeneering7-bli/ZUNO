@@ -39,6 +39,7 @@ import coil3.compose.AsyncImagePainter
 import coil3.compose.rememberAsyncImagePainter
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.metrolist.music.ui.component.shimmer.ShimmerHost
 import kotlinx.coroutines.delay
 
