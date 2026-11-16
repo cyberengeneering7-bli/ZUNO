@@ -34,6 +34,16 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Calculate build version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version_code=$((100 + GITHUB_RUN_NUMBER))
+          version_name="1.${GITHUB_RUN_NUMBER}"
+          echo "version_code=$version_code" >> "$GITHUB_OUTPUT"
+          echo "version_name=$version_name" >> "$GITHUB_OUTPUT"
+
       - name: Decode and validate permanent signing key
         env:
           ZUNO_KEYSTORE_BASE64: ${{ secrets.ZUNO_KEYSTORE_BASE64 }}
@@ -68,8 +78,8 @@ jobs:
           STORE_PASSWORD: ${{ secrets.ZUNO_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ZUNO_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ZUNO_KEY_PASSWORD }}
-          ZUNO_VERSION_CODE: ${{ 100 + github.run_number }}
-          ZUNO_VERSION_NAME: 1.${{ github.run_number }}
+          ZUNO_VERSION_CODE: ${{ steps.version.outputs.version_code }}
+          ZUNO_VERSION_NAME: ${{ steps.version.outputs.version_name }}
           PULL_REQUEST: "false"
           GITHUB_EVENT_NAME: ${{ github.event_name }}
 
@@ -85,7 +95,7 @@ jobs:
             echo '## ZUNO signed FOSS release APK'
             echo "- File: \`$(basename "$apk")\`"
             echo "- SHA-256: \`$sha\`"
-            echo "- Version code: \`${{ 100 + github.run_number }}\`"
+            echo "- Version code: \`${{ steps.version.outputs.version_code }}\`"
             echo '- Flavor: `fossRelease` (updater enabled, non-debug)'
           } >> "$GITHUB_STEP_SUMMARY"
 
