@@ -488,14 +488,14 @@ stable
 set search_path = public
 as $$
   select video_id,
-         max(song_title) filter (where song_title <> ''),
-         max(artist), max(image_url), max(song_link),
-         count(*) filter (where event_type = 'play_start')::bigint,
-         round(coalesce(sum(case when event_type in ('progress','play_stop','play_complete') then greatest(duration_ms, 0) else 0 end), 0) / 60000.0, 1),
-         count(*) filter (where event_type = 'download_completed')::bigint,
-         count(*) filter (where event_type = 'wishlist_added')::bigint,
-         count(*) filter (where event_type in ('share_opened','share_completed'))::bigint,
-         max(created_at)
+         max(song_title) filter (where song_title <> '') as song_title,
+         max(artist) as artist, max(image_url) as image_url, max(song_link) as song_link,
+         count(*) filter (where event_type = 'play_start')::bigint as plays,
+         round(coalesce(sum(case when event_type in ('progress','play_stop','play_complete') then greatest(duration_ms, 0) else 0 end), 0) / 60000.0, 1) as listening_minutes,
+         count(*) filter (where event_type = 'download_completed')::bigint as downloads,
+         count(*) filter (where event_type = 'wishlist_added')::bigint as wishlist_adds,
+         count(*) filter (where event_type in ('share_opened','share_completed'))::bigint as shares,
+         max(created_at) as last_played_at
    from public.analytics_events
    where public.is_admin()
      and video_id is not null
