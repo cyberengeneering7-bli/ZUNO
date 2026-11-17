@@ -97,20 +97,42 @@ security definer
 stable
 set search_path = public
 as $zuno$
-  select video_id,
-         max(song_title) filter (where song_title <> '') as song_title,
-         max(artist) as artist, max(image_url) as image_url, max(song_link) as song_link,
-         count(*) filter (where event_type = 'play_start')::bigint as plays,
-         round(coalesce(sum(case when event_type in ('progress','play_stop','play_complete') then greatest(duration_ms, 0) else 0 end), 0) / 60000.0, 1) as listening_minutes,
-         count(*) filter (where event_type = 'download_completed')::bigint as downloads,
-         count(*) filter (where event_type = 'wishlist_added')::bigint as wishlist_adds,
-         count(*) filter (where event_type in ('share_opened','share_completed'))::bigint as shares,
-         max(created_at) as last_played_at
-   from public.analytics_events
+  with event_stats as (
+    select video_id,
+           max(song_title) filter (where song_title <> '') as song_title,
+           max(artist) as artist, max(image_url) as image_url, max(song_link) as song_link,
+           count(*) filter (where event_type = 'play_start')::bigint as event_plays,
+           round(coalesce(sum(case when event_type in ('progress','play_stop','play_complete') then greatest(duration_ms, 0) else 0 end), 0) / 60000.0, 1) as listening_minutes,
+           count(*) filter (where event_type = 'download_completed')::bigint as downloads,
+           count(*) filter (where event_type = 'wishlist_added')::bigint as wishlist_adds,
+           count(*) filter (where event_type in ('share_opened','share_completed'))::bigint as shares,
+           max(created_at) as event_last_played_at
+      from public.analytics_events
+     where video_id is not null
+       and created_at >= now() - make_interval(days => least(greatest(coalesce(p_days, 30), 1), 365))
+     group by video_id
+  ), legacy_stats as (
+    select video_id, sum(play_count)::bigint as legacy_plays, max(last_played_at) as legacy_last_played_at
+      from public.song_play_counts
+     where play_date >= current_date - least(greatest(coalesce(p_days, 30), 1), 365)
+     group by video_id
+  )
+  select s.video_id,
+         coalesce(e.song_title, s.title) as song_title,
+         coalesce(e.artist, s.artist) as artist,
+         coalesce(e.image_url, s.cover_url) as image_url,
+         coalesce(e.song_link, 'https://www.youtube.com/watch?v=' || s.video_id) as song_link,
+         greatest(coalesce(e.event_plays, 0), coalesce(l.legacy_plays, 0))::bigint as plays,
+         coalesce(e.listening_minutes, 0)::numeric as listening_minutes,
+         coalesce(e.downloads, 0)::bigint as downloads,
+         coalesce(e.wishlist_adds, 0)::bigint as wishlist_adds,
+         coalesce(e.shares, 0)::bigint as shares,
+         greatest(e.event_last_played_at, l.legacy_last_played_at) as last_played_at
+    from public.songs s
+    left join event_stats e on e.video_id = s.video_id
+    left join legacy_stats l on l.video_id = s.video_id
    where public.is_admin()
-     and video_id is not null
-     and created_at >= now() - make_interval(days => least(greatest(coalesce(p_days, 30), 1), 365))
-   group by video_id
+     and (e.video_id is not null or l.video_id is not null)
    order by plays desc, listening_minutes desc, last_played_at desc
    limit least(greatest(coalesce(p_limit, 20), 1), 100);
 $zuno$;
