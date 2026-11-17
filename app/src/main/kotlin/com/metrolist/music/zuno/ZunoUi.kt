@@ -79,7 +79,7 @@ fun playZunoSong(
     ZunoPanelState.recentSongs.value = ZunoPanel.cachedRecentSongs(context)
     ZunoPanel.reportSongPlay(context, song.videoId)
     ZunoPanel.recordAnalyticsEvent(
-        context = context,
+        c = context,
         eventType = "play_start",
         videoId = song.videoId,
         title = song.title,
