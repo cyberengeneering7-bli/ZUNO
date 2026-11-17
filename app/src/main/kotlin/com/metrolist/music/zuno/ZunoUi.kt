@@ -86,14 +86,12 @@ private val bannerPalette =
     )
 
 private val builtInSongBanners = listOf(
-    "Jai Ho" to "8xvJY8g9g4U",
     "Shape of You" to "JGwWNGJdvx8",
     "Despacito" to "kJQP7kiw5Fk",
     "Blinding Lights" to "4NRXx6U8ABQ",
     "Perfect" to "2Vv-BfVoq4g",
     "Believer" to "7wtfhZwyrcc",
     "Faded" to "60ItHLz5WEA",
-    "Closer" to "PT2_F-1esPs",
     "Senorita" to "Pkh8UtuejGw",
     "Heat Waves" to "mRD0-GxqHVo",
     "Stay" to "kTJczUoc26U",
