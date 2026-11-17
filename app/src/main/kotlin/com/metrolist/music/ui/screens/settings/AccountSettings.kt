@@ -410,8 +410,6 @@ fun AccountSettings(
                     Material3SettingsItem(
                         title = { Text(stringResource(R.string.settings)) },
                         icon = painterResource(R.drawable.settings),
-                        showBadge = BuildConfig.UPDATER_AVAILABLE &&
-                            latestVersionName != BuildConfig.BASE_VERSION_NAME,
                         onClick = {
                             onClose()
                             navController.navigate("settings")
@@ -419,21 +417,6 @@ fun AccountSettings(
                     )
                 )
 
-                if (BuildConfig.UPDATER_AVAILABLE && latestVersionName != BuildConfig.BASE_VERSION_NAME) {
-                    val releaseInfo = Updater.getCachedLatestRelease()
-                    val downloadUrl = releaseInfo?.let { Updater.getDownloadUrlForCurrentVariant(it) }
-                    if (downloadUrl != null) {
-                        add(
-                            Material3SettingsItem(
-                                title = { Text(stringResource(R.string.new_version_available)) },
-                                description = { Text(latestVersionName) },
-                                icon = painterResource(R.drawable.update),
-                                showBadge = true,
-                                onClick = { uriHandler.openUri(downloadUrl) }
-                            )
-                        )
-                    }
-                }
             },
             useLowContrast = true
         )

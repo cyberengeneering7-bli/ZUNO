@@ -63,7 +63,6 @@ data class ZunoBanner(
 
 /** Ek baar mein sabse zyada itne banner (pinned pehle). */
 private const val MAX_BANNERS = 20
-private const val MIN_BANNER_SHIMMER_DURATION_MS = 300L
 
 /**
  * Bada card beech mein, aur dono taraf patli patti. Slide karne par patti khidki ke palle ki tarah
@@ -125,7 +124,7 @@ private fun ZunoBannerCard(
             ImageRequest
                 .Builder(context)
                 .data(imageUrl)
-                .crossfade(true)
+        .crossfade(false)
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .diskCachePolicy(CachePolicy.ENABLED)
                 .networkCachePolicy(CachePolicy.ENABLED)
@@ -137,18 +136,7 @@ private fun ZunoBannerCard(
             contentScale = ContentScale.Crop,
         )
     val imageState by imagePainter.state.collectAsState()
-    val minimumShimmerDurationElapsed by
-        produceState(initialValue = false, key1 = imageUrl) {
-            if (imageUrl != null) {
-                delay(MIN_BANNER_SHIMMER_DURATION_MS)
-                value = true
-            }
-        }
     val hasLoadedImage = imageUrl != null && imageState is AsyncImagePainter.State.Success
-    val isLoadingImage =
-        imageUrl != null &&
-            imageState !is AsyncImagePainter.State.Error &&
-            (imageState !is AsyncImagePainter.State.Success || !minimumShimmerDurationElapsed)
 
     Box(
         modifier =
@@ -213,45 +201,6 @@ private fun ZunoBannerCard(
                     fontSize = 16.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-
-        if (isLoadingImage) {
-            ShimmerHost(
-                modifier =
-                Modifier
-                        .fillMaxSize()
-                        .clip(shape)
-                        .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    banner.colorStart.copy(alpha = 0.72f),
-                                    banner.colorEnd.copy(alpha = 0.72f),
-                                    Color(0xFF17171D),
-                                ),
-                            ),
-                        ),
-                verticalArrangement = Arrangement.Bottom,
-                showGradient = false,
-            ) {
-                Spacer(
-                    modifier =
-                        Modifier
-                            .padding(start = 20.dp, end = 130.dp)
-                            .fillMaxWidth()
-                            .height(26.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color.White.copy(alpha = 0.24f)),
-                )
-                Spacer(
-                    modifier =
-                        Modifier
-                            .padding(start = 20.dp, end = 190.dp, top = 12.dp, bottom = 22.dp)
-                            .fillMaxWidth()
-                            .height(18.dp)
-                            .clip(RoundedCornerShape(7.dp))
-                            .background(Color.White.copy(alpha = 0.16f)),
                 )
             }
         }
