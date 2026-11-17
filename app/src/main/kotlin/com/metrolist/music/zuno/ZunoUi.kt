@@ -59,6 +59,9 @@ fun playZunoSong(
     context: Context,
     playerConnection: PlayerConnection,
     song: ZunoRemoteSong,
+    sourceType: String = "unknown",
+    sourceName: String = "",
+    sourceId: String? = null,
 ) {
     playerConnection.playQueue(
         YouTubeQueue(
@@ -75,6 +78,18 @@ fun playZunoSong(
     ZunoPanel.rememberRecentSong(context, song)
     ZunoPanelState.recentSongs.value = ZunoPanel.cachedRecentSongs(context)
     ZunoPanel.reportSongPlay(context, song.videoId)
+    ZunoPanel.recordAnalyticsEvent(
+        context = context,
+        eventType = "play_start",
+        videoId = song.videoId,
+        title = song.title,
+        artist = song.artist,
+        imageUrl = song.coverUrl,
+        sourceType = sourceType,
+        sourceName = sourceName,
+        sourceId = sourceId,
+        categoryName = song.categoryName,
+    )
 }
 
 private val bannerPalette =
@@ -204,6 +219,9 @@ fun ZunoHomeBanners(
                             context,
                             playerConnection,
                             s ?: ZunoRemoteSong(b.actionValue, b.title, b.subtitle, b.imageUrl, null, null, 0, false, emptyList()),
+                            sourceType = "banner",
+                            sourceName = b.title,
+                            sourceId = b.id,
                         )
                     }
                 "link" -> if (b.actionValue.startsWith("http")) runCatching { uriHandler.openUri(b.actionValue) }
@@ -242,7 +260,7 @@ fun ZunoPicks(modifier: Modifier = Modifier) {
                             Modifier
                                 .width(140.dp)
                                 .clip(RoundedCornerShape(14.dp))
-                                .clickable { playerConnection?.let { playZunoSong(context, it, s) } },
+                                .clickable { playerConnection?.let { playZunoSong(context, it, s, "category", section.name, section.name) } },
                     ) {
                         AsyncImage(
                             model = s.cover(),
@@ -299,7 +317,7 @@ fun ZunoSearchSection(query: String) {
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .clickable { playerConnection?.let { playZunoSong(context, it, s) } }
+                        .clickable { playerConnection?.let { playZunoSong(context, it, s, "search", query) } }
                         .padding(horizontal = 16.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

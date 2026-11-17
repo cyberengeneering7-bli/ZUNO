@@ -231,6 +231,7 @@ const ICONS = {
   broken: '<path d="M10.3 3.9L2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
   users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8"/><path d="M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/>',
   announcements: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
+  analytics: '<path d="M4 19V5"/><path d="M4 19h16"/><path d="m7 15 3-4 3 2 5-7"/>',
   servers: '<rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 6.5h.01"/><path d="M7 17.5h.01"/>',
   settings: '<path d="M4 6h10"/><path d="M18 6h2"/><circle cx="16" cy="6" r="2"/><path d="M4 12h2"/><path d="M10 12h10"/><circle cx="8" cy="12" r="2"/><path d="M4 18h10"/><path d="M18 18h2"/><circle cx="16" cy="18" r="2"/>',
   close: '<path d="M6 6l12 12"/><path d="M18 6L6 18"/>',
@@ -244,7 +245,7 @@ const icon = (n, size = 20) => `<svg class="ic" viewBox="0 0 24 24" width="${siz
 const TABS = [
   ["dashboard", "dashboard", "Dashboard"], ["banners", "banners", "Banners"], ["songs", "songs", "Songs"],
   ["categories", "categories", "Categories"], ["broken", "broken", "Broken songs"], ["users", "users", "Users"],
-  ["announcements", "announcements", "Announcements"], ["updates", "updates", "App update"], ["servers", "servers", "Together servers"], ["about", "about", "About page"], ["settings", "settings", "Settings"]
+  ["analytics", "analytics", "Listening Analytics"], ["announcements", "announcements", "Announcements"], ["updates", "updates", "App update"], ["servers", "servers", "Together servers"], ["about", "about", "About page"], ["settings", "settings", "Settings"]
 ];
 function viewShell() {
   $("#root").innerHTML = `<div class="shell"><aside class="side"><div class="brand"><div class="logo"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6h12L6 18h12"/></svg></div>ZUNO Panel</div>
@@ -300,6 +301,38 @@ VIEWS.dashboard = async () => {
     <div class="grid">${S(latest ? latest.version_code : "—", "Latest version code")}${S(latest ? deviceVersions.filter(x => x.app_version_code === latest.version_code).length : 0, "Users on latest")}${S(latest ? deviceVersions.filter(x => x.app_version_code < latest.version_code).length : 0, "Users on older")}</div>
     <div class="list" style="margin-top:12px">${versionCounts.length ? versionCounts.map(([v, n]) => `<div class="row"><div class="grow"><div class="t">Version code ${esc(v)}</div><div class="muted sm">${n} registered device(s)${latest && Number(v) < latest.version_code ? " · older" : ""}</div></div></div>`).join("") : `<div class="empty">Version-code data abhi nahi hai.</div>`}</div>
     <p class="muted sm" style="margin-top:18px">"Active" ka matlab device ne app kholi. Ye sirf random device ID hai, koi login ya token server pe nahi aata.</p>`);
+};
+/* ================= Listening Analytics ================= */
+let analyticsDays = 30;
+VIEWS.analytics = async () => {
+  setMain(head("Listening Analytics", `<select id="ad"><option value="1">Last 24 hours</option><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option></select><button class="btn ghost sm" data-a="analyticsRefresh">Refresh</button>`) + `<div class="empty">Loading real activity…</div>`);
+  const [summaryRows, topRows, events] = await Promise.all([
+    ok(sb.rpc("zuno_analytics_summary", { p_days: analyticsDays })),
+    ok(sb.rpc("zuno_analytics_top", { p_days: analyticsDays, p_limit: 50 })),
+    ok(sb.from("analytics_events").select("*").order("created_at", { ascending: false }).limit(100))
+  ]);
+  const s = summaryRows?.[0] || {};
+  const S = (n, l) => `<div class="stat"><b>${esc(n ?? 0)}</b><span class="muted">${l}</span></div>`;
+  const fmt = n => Number(n || 0).toLocaleString();
+  setMain(head("Listening Analytics", `<select id="ad"><option value="1" ${analyticsDays === 1 ? "selected" : ""}>Last 24 hours</option><option value="7" ${analyticsDays === 7 ? "selected" : ""}>Last 7 days</option><option value="30" ${analyticsDays === 30 ? "selected" : ""}>Last 30 days</option><option value="90" ${analyticsDays === 90 ? "selected" : ""}>Last 90 days</option></select><button class="btn ghost sm" data-a="analyticsRefresh">Refresh</button>`) +
+    `<p class="muted sm" style="margin:-6px 0 14px">Ye page sirf app se aaye real events dikhata hai. Login ke bina activity anonymous device ID ke saath save hoti hai.</p>
+    <div class="grid">${S(fmt(s.total_events), "Events")}${S(fmt(s.unique_devices), "Unique devices")}${S(fmt(s.unique_songs), "Songs heard")}${S(fmt(s.listening_minutes), "Listening minutes")}${S(fmt(s.downloads), "Downloads")}${S(fmt(s.wishlist_adds), "Wishlist adds")}${S(fmt(s.shares), "Shares")}</div>
+    <h3 style="margin:22px 0 10px">Most played songs</h3>
+    <div class="list">${topRows?.length ? topRows.map((r, i) => `<div class="row">${r.image_url ? `<img class="thumb" src="${esc(r.image_url)}" alt="" loading="lazy">` : `<div class="thumb"></div>`}<div class="grow"><div class="t">${i + 1}. ${esc(r.song_title || r.video_id)}</div><div class="muted sm">${esc(r.artist || "Unknown artist")} · ${fmt(r.plays)} plays · ${fmt(r.listening_minutes)} min</div><div><span class="badge">${fmt(r.downloads)} downloads</span><span class="badge">${fmt(r.wishlist_adds)} wishlist</span><span class="badge">${fmt(r.shares)} shares</span>${r.last_played_at ? `<span class="badge">last ${ago(r.last_played_at)}</span>` : ""}</div></div><div class="acts"><button class="btn ghost sm" data-a="analyticsPin" data-video="${esc(r.video_id)}" data-title="${esc(r.song_title || r.video_id)}" data-artist="${esc(r.artist || "")}" data-image="${esc(r.image_url || "")}">Pin banner</button>${r.song_link ? `<a class="btn ghost sm" href="${esc(r.song_link)}" target="_blank" rel="noopener">Open link</a>` : ""}</div></div>`).join("") : `<div class="empty">Abhi koi listening event nahi aaya. App se song play hone ke baad yahan real data dikhega.</div>`}</div>
+    <h3 style="margin:22px 0 10px">Recent activity</h3>
+    <div class="list">${events?.length ? events.map(e => `<div class="row"><div class="grow"><div class="t">${esc(e.event_type)} · ${esc(e.song_title || e.video_id || "Unknown song")}</div><div class="muted sm">${esc(e.artist || "")} · source: ${esc(e.source_type)}${e.source_name ? " / " + esc(e.source_name) : ""} · device ${esc((e.device_id || "").slice(0, 12))}… · ${ago(e.created_at)}</div><div><span class="badge">position ${Math.round(Number(e.position_ms || 0) / 1000)}s</span><span class="badge">duration ${Math.round(Number(e.duration_ms || 0) / 1000)}s</span>${e.category_name ? `<span class="badge">${esc(e.category_name)}</span>` : ""}</div></div>${e.song_link ? `<a class="btn ghost sm" href="${esc(e.song_link)}" target="_blank" rel="noopener">Song link</a>` : ""}</div>`).join("") : `<div class="empty">No events yet.</div>`}</div>`);
+  $("#ad").onchange = e => { analyticsDays = Number(e.target.value) || 30; VIEWS.analytics(); };
+};
+A.analyticsRefresh = () => VIEWS.analytics();
+A.analyticsPin = async d => {
+  if (!d.video) throw new Error("Song ID missing");
+  const existing = await ok(sb.from("banners").select("id").eq("action_type", "song").eq("action_value", d.video).limit(1));
+  if (existing?.length) {
+    await ok(sb.from("banners").update({ is_active: true, is_pinned: true }).eq("id", existing[0].id));
+  } else {
+    await ok(sb.from("banners").insert({ title: d.title || d.video, subtitle: d.artist || "ZUNO picks", image_url: d.image || null, action_type: "song", action_value: d.video, is_pinned: true, is_active: true, sort_order: 0 }));
+  }
+  toast("Song banner mein pin ho gaya");
 };
 A.refresh = () => VIEWS[tab]();
 

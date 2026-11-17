@@ -99,6 +99,8 @@ private fun JSONObject.str(name: String): String? = if (isNull(name)) null else 
 object ZunoPanel {
     private const val PREFS = "zuno_panel"
     private const val PENDING_PLAYS_KEY = "pending_song_plays"
+    private const val PENDING_ANALYTICS_KEY = "pending_analytics_events"
+    private const val MAX_PENDING_ANALYTICS = 120
     private const val RECENT_SONGS_KEY = "recent_songs"
     private const val MAX_RECENT_SONGS = 20
     private const val MAX_PENDING_PLAYS = 60
@@ -106,6 +108,7 @@ object ZunoPanel {
     private val reported = HashSet<String>()
     private val pendingPlayLock = Any()
     private val pendingPlayFlushMutex = Mutex()
+    private val pendingAnalyticsFlushMutex = Mutex()
 
     private fun prefs(c: Context) = c.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -317,6 +320,76 @@ object ZunoPanel {
             }
         }
         retryPendingSongPlays(context)
+    }
+
+    fun recordAnalyticsEvent(
+        c: Context,
+        eventType: String,
+        videoId: String? = null,
+        title: String = "",
+        artist: String = "",
+        imageUrl: String? = null,
+        sourceType: String = "unknown",
+        sourceName: String = "",
+        sourceId: String? = null,
+        categoryName: String? = null,
+        positionMs: Long = 0L,
+        durationMs: Long = 0L,
+        metadata: JSONObject = JSONObject(),
+    ) {
+        if (!ZunoPanelConfig.isConfigured || eventType.isBlank()) return
+        val context = c.applicationContext
+        val event =
+            JSONObject()
+                .put("device_id", deviceId(context))
+                .put("event_type", eventType)
+                .put("video_id", videoId ?: JSONObject.NULL)
+                .put("song_title", title)
+                .put("artist", artist)
+                .put("song_link", videoId?.let { "https://www.youtube.com/watch?v=$it" } ?: JSONObject.NULL)
+                .put("image_url", imageUrl ?: JSONObject.NULL)
+                .put("source_type", sourceType)
+                .put("source_name", sourceName)
+                .put("source_id", sourceId ?: JSONObject.NULL)
+                .put("category_name", categoryName ?: JSONObject.NULL)
+                .put("position_ms", positionMs.coerceAtLeast(0L))
+                .put("duration_ms", durationMs.coerceAtLeast(0L))
+                .put("session_id", prefs(context).getString("analytics_session", null) ?: UUID.randomUUID().toString().also { prefs(context).edit().putString("analytics_session", it).apply() })
+                .put("app_version", BuildConfig.VERSION_NAME)
+                .put("model", "${Build.MANUFACTURER} ${Build.MODEL}")
+                .put("metadata", metadata)
+        synchronized(pendingPlayLock) {
+            val pending = JSONArray(prefs(context).getString(PENDING_ANALYTICS_KEY, "[]"))
+            if (pending.length() >= MAX_PENDING_ANALYTICS) pending.remove(0)
+            pending.put(event)
+            prefs(context).edit().putString(PENDING_ANALYTICS_KEY, pending.toString()).apply()
+        }
+        retryPendingAnalytics(context)
+    }
+
+    fun retryPendingAnalytics(c: Context) {
+        scope.launch { flushPendingAnalytics(c.applicationContext) }
+    }
+
+    private suspend fun flushPendingAnalytics(c: Context) {
+        if (!ZunoPanelConfig.isConfigured) return
+        pendingAnalyticsFlushMutex.withLock {
+            val pending = synchronized(pendingPlayLock) { JSONArray(prefs(c).getString(PENDING_ANALYTICS_KEY, "[]")) }
+            if (pending.length() == 0) return@withLock
+            var sent = 0
+            for (i in 0 until pending.length()) {
+                val event = pending.optJSONObject(i) ?: continue
+                val result = request("POST", "/rest/v1/rpc/record_analytics_event", JSONObject().put("p_event", event).toString())
+                if (result == null) break
+                sent++
+            }
+            if (sent > 0) synchronized(pendingPlayLock) {
+                val current = JSONArray(prefs(c).getString(PENDING_ANALYTICS_KEY, "[]"))
+                val remaining = JSONArray()
+                for (i in sent until current.length()) remaining.put(current.opt(i))
+                prefs(c).edit().putString(PENDING_ANALYTICS_KEY, remaining.toString()).apply()
+            }
+        }
     }
 
     fun retryPendingSongPlays(c: Context) {
