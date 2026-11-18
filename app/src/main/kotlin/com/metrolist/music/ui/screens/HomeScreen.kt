@@ -143,6 +143,7 @@ import com.metrolist.music.playback.queues.SpotifyQueue
 import com.metrolist.spotify.Spotify
 import timber.log.Timber
 import com.metrolist.music.zuno.ZunoHomeBanners
+import com.metrolist.music.zuno.ZunoPanel
 import com.metrolist.music.zuno.ZunoPicks
 import com.metrolist.music.ui.component.YouTubeListItem
 import com.metrolist.music.ui.component.AlbumGridItem
@@ -672,6 +673,7 @@ fun HomeScreen(
     val menuState = LocalMenuState.current
     val bottomSheetPageState = LocalBottomSheetPageState.current
     val database = LocalDatabase.current
+    val context = LocalContext.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val haptic = LocalHapticFeedback.current
     val listenTogetherManager = LocalListenTogetherManager.current
@@ -1675,6 +1677,16 @@ fun HomeScreen(
                                                                                                                 items = listOf(item.toMediaItem())
                                                                                                             )
                                                                                                         }
+                                                                                                    )
+                                                                                                    ZunoPanel.recordAnalyticsEvent(
+                                                                                                        c = context,
+                                                                                                        eventType = "play_start",
+                                                                                                        videoId = item.id,
+                                                                                                        title = item.title,
+                                                                                                        artist = item.artists.joinToString(", ") { it.name },
+                                                                                                        sourceType = "speed_dial",
+                                                                                                        sourceName = item.title,
+                                                                                                        sourceId = item.id,
                                                                                                     )
                                                                                                 }
                                                                                             }
@@ -2880,4 +2892,3 @@ fun HomeScreen(
         }
     }
 }
-
