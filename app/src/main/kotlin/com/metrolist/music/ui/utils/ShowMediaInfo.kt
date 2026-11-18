@@ -8,9 +8,13 @@ package com.metrolist.music.ui.utils
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.text.format.Formatter
 import android.widget.Toast
+import coil3.compose.AsyncImage
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,10 +26,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -35,10 +41,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.metrolist.innertube.YouTube
 import com.metrolist.innertube.models.MediaInfo
 import com.metrolist.music.LocalArtistNameAliases
@@ -79,6 +88,7 @@ fun ShowMediaInfo(videoId: String) {
 
     val database = LocalDatabase.current
     var song by remember { mutableStateOf<Song?>(null) }
+    var lyricsText by remember { mutableStateOf<String?>(null) }
 
     var currentFormat by remember { mutableStateOf<FormatEntity?>(null) }
 
@@ -105,6 +115,12 @@ fun ShowMediaInfo(videoId: String) {
     }
 
     LaunchedEffect(Unit, videoId) {
+        database.lyrics(videoId).collect {
+            lyricsText = it?.lyrics?.takeUnless { text -> text == com.metrolist.music.db.entities.LyricsEntity.LYRICS_NOT_FOUND }
+        }
+    }
+
+    LaunchedEffect(Unit, videoId) {
         database.format(videoId).collect {
             currentFormat = it
         }
@@ -123,6 +139,79 @@ fun ShowMediaInfo(videoId: String) {
         if (info != null) {
             item(contentType = "MediaDetails") {
                 Column {
+                    AsyncImage(
+                        model = "https://i.ytimg.com/vi/$videoId/maxresdefault.jpg",
+                        contentDescription = info?.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(210.dp)
+                            .clip(RoundedCornerShape(24.dp)),
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        text = info?.title.orEmpty(),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                    Text(
+                        text = info?.author.orEmpty(),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TextButton(
+                            onClick = {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=$videoId")))
+                            },
+                        ) { Text("Open video & comments") }
+                    }
+                    if (!info?.authorThumbnail.isNullOrBlank()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(22.dp))
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            AsyncImage(
+                                model = info?.authorThumbnail,
+                                contentDescription = info?.author,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .height(72.dp)
+                                    .width(72.dp)
+                                    .clip(RoundedCornerShape(18.dp)),
+                            )
+                            Column(Modifier.padding(start = 12.dp)) {
+                                Text("Artist", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                                Text(info?.author.orEmpty(), style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                info?.subscribers?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                            }
+                        }
+                    }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(22.dp))
+                            .padding(16.dp),
+                    ) {
+                        Text("Lyrics", style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            text = lyricsText?.takeIf { it.isNotBlank() } ?: "Lyrics will appear here after they are loaded for this song.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            maxLines = 18,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     val baseList = listOf(
                         stringResource(R.string.song_title) to (info?.title ?: song?.title),
                         stringResource(R.string.song_artists) to (
