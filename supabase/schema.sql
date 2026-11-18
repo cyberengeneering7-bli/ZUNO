@@ -504,6 +504,14 @@ as $$
     select video_id, sum(play_count)::bigint as legacy_plays, max(last_played_at) as legacy_last_played_at
       from public.song_play_counts
      group by video_id
+  ), catalog as (
+    select video_id, title, artist, cover_url
+      from public.songs
+     where is_active = true and auto_hidden = false
+    union all
+    select e.video_id, coalesce(e.song_title, e.video_id), coalesce(e.artist, ''), e.image_url
+      from event_stats e
+     where not exists (select 1 from public.songs s where s.video_id = e.video_id)
   )
   select s.video_id, coalesce(e.song_title, s.title) as song_title,
          coalesce(e.artist, s.artist) as artist, coalesce(e.image_url, s.cover_url) as image_url,
@@ -513,7 +521,7 @@ as $$
          coalesce(e.downloads, 0)::bigint as downloads, coalesce(e.wishlist_adds, 0)::bigint as wishlist_adds,
          coalesce(e.shares, 0)::bigint as shares,
          greatest(e.event_last_played_at, l.legacy_last_played_at) as last_played_at
-    from public.songs s
+    from catalog s
     left join event_stats e on e.video_id = s.video_id
     left join legacy_stats l on l.video_id = s.video_id
    where public.is_admin() and (e.video_id is not null or l.video_id is not null)
