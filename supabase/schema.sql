@@ -503,7 +503,6 @@ as $$
   ), legacy_stats as (
     select video_id, sum(play_count)::bigint as legacy_plays, max(last_played_at) as legacy_last_played_at
       from public.song_play_counts
-     where play_date >= current_date - least(greatest(coalesce(p_days, 30), 1), 365)
      group by video_id
   )
   select s.video_id, coalesce(e.song_title, s.title) as song_title,
