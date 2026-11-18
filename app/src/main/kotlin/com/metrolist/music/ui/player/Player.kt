@@ -11,6 +11,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.net.Uri
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
@@ -184,7 +185,7 @@ import com.metrolist.music.ui.utils.ShowMediaInfo
 import com.metrolist.music.ui.utils.ShowOffsetDialog
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.makeTimeString
-import com.metrolist.music.utils.numberFormatter
+import com.metrolist.music.ui.utils.numberFormatter
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.utils.safeDataStoreEdit
