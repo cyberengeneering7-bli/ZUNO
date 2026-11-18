@@ -1930,11 +1930,14 @@ fun BottomSheetPlayer(
                         Modifier
                             .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
                             .padding(bottom = bottomPadding)
-                            .animateContentSize(),
+                            .animateContentSize()
+                            .verticalScroll(rememberScrollState()),
                 ) {
                     Box(
                         contentAlignment = Alignment.Center,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(if (isFullScreen) 520.dp else 430.dp),
                     ) {
                         // Remember lambdas to prevent unnecessary recomposition
                         val currentSliderPosition by rememberUpdatedState(sliderPosition)
@@ -1964,6 +1967,8 @@ fun BottomSheetPlayer(
 
                     mediaMetadata?.let {
                         controlsContent(it)
+                        Spacer(Modifier.height(16.dp))
+                        PlayerSongDetails(it.id)
                     }
 
                     Spacer(Modifier.height(30.dp))
@@ -2137,7 +2142,6 @@ fun InlineLyricsView(
                 }
             }
         }
-        mediaMetadata?.id?.let { PlayerSongDetails(it) }
     }
 }
 
