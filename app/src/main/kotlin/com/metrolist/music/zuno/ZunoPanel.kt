@@ -293,6 +293,23 @@ object ZunoPanel {
         prefs(c).edit().putString(RECENT_SONGS_KEY, json.toString()).apply()
     }
 
+    fun rememberRecentSong(c: Context, videoId: String, title: String, artist: String, coverUrl: String? = null) {
+        rememberRecentSong(
+            c,
+            ZunoRemoteSong(
+                videoId = videoId,
+                title = title,
+                artist = artist,
+                coverUrl = coverUrl,
+                categoryId = null,
+                categoryName = null,
+                categoryOrder = 0,
+                showOnHome = false,
+                tags = emptyList(),
+            ),
+        )
+    }
+
     suspend fun refreshTopSongs(c: Context): List<ZunoRemoteSong>? {
         val raw =
             request(

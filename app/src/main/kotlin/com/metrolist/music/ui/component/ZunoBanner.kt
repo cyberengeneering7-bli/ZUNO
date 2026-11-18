@@ -30,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -151,6 +152,7 @@ private fun ZunoBannerCard(
                 painter = imagePainter,
                 contentDescription = banner.title,
                 contentScale = ContentScale.Crop,
+                filterQuality = FilterQuality.High,
                 // Some YouTube hqdefault thumbnails contain their own black
                 // letterbox bars. A small inner zoom removes those bars while
                 // the parent clip keeps the image inside the rounded card.
@@ -158,8 +160,8 @@ private fun ZunoBannerCard(
                     Modifier
                         .fillMaxSize()
                         .graphicsLayer {
-                            scaleX = 1.28f
-                            scaleY = 1.28f
+                            scaleX = 1.45f
+                            scaleY = 1.45f
                         },
             )
         }

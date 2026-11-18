@@ -39,6 +39,7 @@ import com.metrolist.music.models.MediaMetadata
 import com.metrolist.music.models.toMediaMetadata
 import com.metrolist.music.utils.InnerTubeXPlayer
 import com.metrolist.music.utils.enumPreference
+import com.metrolist.music.zuno.ZunoPanel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -258,6 +259,13 @@ constructor(
                                 Download.STATE_COMPLETED -> {
                                     removeFromPlayerCache(download.request.id)
                                     database.updateDownloadedInfo(download.request.id, true, LocalDateTime.now())
+                                    ZunoPanel.recordAnalyticsEvent(
+                                        c = context,
+                                        eventType = "download_completed",
+                                        videoId = download.request.id,
+                                        sourceType = "download",
+                                        sourceName = "Download",
+                                    )
                                 }
                                 Download.STATE_FAILED,
                                 Download.STATE_STOPPED,

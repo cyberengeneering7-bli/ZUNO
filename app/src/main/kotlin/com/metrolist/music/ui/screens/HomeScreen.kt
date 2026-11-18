@@ -144,6 +144,7 @@ import com.metrolist.spotify.Spotify
 import timber.log.Timber
 import com.metrolist.music.zuno.ZunoHomeBanners
 import com.metrolist.music.zuno.ZunoPanel
+import com.metrolist.music.zuno.ZunoPanelState
 import com.metrolist.music.zuno.ZunoPicks
 import com.metrolist.music.ui.component.YouTubeListItem
 import com.metrolist.music.ui.component.AlbumGridItem
@@ -1688,6 +1689,13 @@ fun HomeScreen(
                                                                                                         sourceName = item.title,
                                                                                                         sourceId = item.id,
                                                                                                     )
+                                                                                                    ZunoPanel.rememberRecentSong(
+                                                                                                        c = context,
+                                                                                                        videoId = item.id,
+                                                                                                        title = item.title,
+                                                                                                        artist = item.artists.joinToString(", ") { it.name },
+                                                                                                    )
+                                                                                                    ZunoPanelState.recentSongs.value = ZunoPanel.cachedRecentSongs(context)
                                                                                                 }
                                                                                             }
 

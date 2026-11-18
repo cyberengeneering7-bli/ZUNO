@@ -155,3 +155,65 @@ alter table public.analytics_events enable row level security;
 drop policy if exists analytics_events_admin_read on public.analytics_events;
 create policy analytics_events_admin_read on public.analytics_events
   for select using (public.is_admin());
+
+
+create or replace function public.zuno_analytics_devices(p_days integer default 30)
+returns table(device_id text, device_model text, app_version text, events bigint, songs bigint, listening_minutes numeric, downloads bigint, likes bigint, shares bigint, last_seen timestamptz)
+language sql security definer stable set search_path = public
+as $zuno$
+  select device_id, max(model), max(app_version), count(*)::bigint,
+         count(distinct video_id)::bigint,
+         round(coalesce(sum(case when event_type in ('progress','play_stop','play_complete') then greatest(duration_ms, 0) else 0 end), 0) / 60000.0, 1),
+         count(*) filter (where event_type = 'download_completed')::bigint,
+         count(*) filter (where event_type in ('wishlist_added','like_added'))::bigint,
+         count(*) filter (where event_type in ('share_opened','share_completed'))::bigint,
+         max(created_at)
+    from public.analytics_events
+   where public.is_admin()
+     and created_at >= now() - make_interval(days => least(greatest(coalesce(p_days, 30), 1), 365))
+   group by device_id
+   order by last_seen desc;
+$zuno$;
+
+create or replace function public.zuno_clear_analytics(p_scope text default 'today', p_video_id text default null, p_device_id text default null)
+returns bigint
+language plpgsql security definer set search_path = public
+as $zuno$
+declare removed bigint := 0;
+begin
+  if not public.is_admin() then return 0; end if;
+  delete from public.analytics_events
+   where (p_video_id is null or video_id = p_video_id)
+     and (p_device_id is null or device_id = p_device_id)
+     and (p_scope = 'all' or (p_scope = 'today' and created_at >= current_date) or (p_scope = 'month' and created_at >= date_trunc('month', now())));
+  get diagnostics removed = row_count;
+  delete from public.song_play_counts
+   where (p_video_id is null or video_id = p_video_id)
+     and (p_scope = 'all' or (p_scope = 'today' and play_date = current_date) or (p_scope = 'month' and play_date >= date_trunc('month', current_date)::date));
+  return removed;
+end;
+$zuno$;
+revoke all on function public.zuno_analytics_devices(integer) from public;
+revoke all on function public.zuno_clear_analytics(text,text,text) from public;
+grant execute on function public.zuno_analytics_devices(integer) to authenticated;
+grant execute on function public.zuno_clear_analytics(text,text,text) to authenticated;
+
+create or replace function public.zuno_analytics_device_songs(p_device_id text, p_days integer default 30, p_limit integer default 50)
+returns table(video_id text, song_title text, artist text, image_url text, song_link text, plays bigint, listening_minutes numeric, downloads bigint, likes bigint, shares bigint, last_played_at timestamptz)
+language sql security definer stable set search_path = public
+as $zuno$
+  select video_id, max(song_title) filter (where song_title <> ''), max(artist), max(image_url), max(song_link),
+         count(*) filter (where event_type = 'play_start')::bigint,
+         round(coalesce(sum(case when event_type in ('progress','play_stop','play_complete') then greatest(duration_ms, 0) else 0 end), 0) / 60000.0, 1),
+         count(*) filter (where event_type = 'download_completed')::bigint,
+         count(*) filter (where event_type in ('wishlist_added','like_added'))::bigint,
+         count(*) filter (where event_type in ('share_opened','share_completed'))::bigint,
+         max(created_at)
+    from public.analytics_events
+   where public.is_admin() and device_id = p_device_id
+     and created_at >= now() - make_interval(days => least(greatest(coalesce(p_days, 30), 1), 365))
+   group by video_id order by count(*) filter (where event_type = 'play_start') desc, max(created_at) desc
+   limit least(greatest(coalesce(p_limit, 50), 1), 100);
+$zuno$;
+revoke all on function public.zuno_analytics_device_songs(text,integer,integer) from public;
+grant execute on function public.zuno_analytics_device_songs(text,integer,integer) to authenticated;

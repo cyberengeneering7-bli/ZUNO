@@ -304,12 +304,15 @@ VIEWS.dashboard = async () => {
 };
 /* ================= Listening Analytics ================= */
 let analyticsDays = 30;
+let analyticsDevice = "";
 VIEWS.analytics = async () => {
   setMain(head("Listening Analytics", `<select id="ad"><option value="1">Last 24 hours</option><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option></select><button class="btn ghost sm" data-a="analyticsRefresh">Refresh</button>`) + `<div class="empty">Loading real activity…</div>`);
-  const [summaryRows, topRows, events] = await Promise.all([
+  const [summaryRows, topRows, events, devices, deviceSongs] = await Promise.all([
     ok(sb.rpc("zuno_analytics_summary", { p_days: analyticsDays })),
     ok(sb.rpc("zuno_analytics_top", { p_days: analyticsDays, p_limit: 50 })),
-    ok(sb.from("analytics_events").select("*").order("created_at", { ascending: false }).limit(100))
+    ok(sb.from("analytics_events").select("*").order("created_at", { ascending: false }).limit(100)),
+    ok(sb.rpc("zuno_analytics_devices", { p_days: analyticsDays })),
+    analyticsDevice ? ok(sb.rpc("zuno_analytics_device_songs", { p_device_id: analyticsDevice, p_days: analyticsDays, p_limit: 50 })) : Promise.resolve([])
   ]);
   const s = summaryRows?.[0] || {};
   const S = (n, l) => `<div class="stat"><b>${esc(n ?? 0)}</b><span class="muted">${l}</span></div>`;
@@ -317,6 +320,10 @@ VIEWS.analytics = async () => {
   setMain(head("Listening Analytics", `<select id="ad"><option value="1" ${analyticsDays === 1 ? "selected" : ""}>Last 24 hours</option><option value="7" ${analyticsDays === 7 ? "selected" : ""}>Last 7 days</option><option value="30" ${analyticsDays === 30 ? "selected" : ""}>Last 30 days</option><option value="90" ${analyticsDays === 90 ? "selected" : ""}>Last 90 days</option></select><button class="btn ghost sm" data-a="analyticsRefresh">Refresh</button>`) +
     `<p class="muted sm" style="margin:-6px 0 14px">Ye page sirf app se aaye real events dikhata hai. Login ke bina activity anonymous device ID ke saath save hoti hai.</p>
     <div class="grid">${S(fmt(s.total_events), "Events")}${S(fmt(s.unique_devices), "Unique devices")}${S(fmt(s.unique_songs), "Songs heard")}${S(fmt(s.listening_minutes), "Listening minutes")}${S(fmt(s.downloads), "Downloads")}${S(fmt(s.wishlist_adds), "Wishlist adds")}${S(fmt(s.shares), "Shares")}</div>
+    <h3 style="margin:22px 0 10px">Device-wise activity</h3>
+    <div class="list">${devices?.length ? devices.map(d => `<div class="row"><div class="grow"><div class="t">${esc(d.device_model || "Unknown device")}</div><div class="muted sm">${esc(d.device_id)} · ${fmt(d.events)} events · ${fmt(d.songs)} songs · ${fmt(d.listening_minutes)} min · last ${ago(d.last_seen)}</div><div><span class="badge">${fmt(d.downloads)} downloads</span><span class="badge">${fmt(d.likes)} likes</span><span class="badge">${fmt(d.shares)} shares</span></div></div><div class="acts"><button class="btn ghost sm" data-a="analyticsDevice" data-device="${esc(d.device_id)}">View songs</button></div></div>`).join("") : `<div class="empty">No device events yet.</div>`}</div>
+    ${analyticsDevice ? `<h3 style="margin:22px 0 10px">Songs on device ${esc(analyticsDevice)}</h3><button class="btn ghost sm" data-a="analyticsAllDevices">Show all devices</button><div class="list" style="margin-top:10px">${deviceSongs?.length ? deviceSongs.map(r => `<div class="row"><div class="grow"><div class="t">${esc(r.song_title || r.video_id)}</div><div class="muted sm">${esc(r.artist || "")} · ${fmt(r.plays)} plays · ${fmt(r.listening_minutes)} min · ${fmt(r.downloads)} downloads · ${fmt(r.likes)} likes · ${fmt(r.shares)} shares</div></div></div>`).join("") : `<div class="empty">Is device ke liye song events nahi mile.</div>`}</div>` : ""}
+    <h3 style="margin:22px 0 10px">Clear analytics data</h3><div class="tools"><button class="btn bad sm" data-a="analyticsClear" data-scope="today">Clear today</button><button class="btn bad sm" data-a="analyticsClear" data-scope="month">Clear this month</button><button class="btn bad sm" data-a="analyticsClear" data-scope="all">Clear all</button></div>
     <h3 style="margin:22px 0 10px">Most played songs</h3>
     <div class="list">${topRows?.length ? topRows.map((r, i) => `<div class="row">${r.image_url ? `<img class="thumb" src="${esc(r.image_url)}" alt="" loading="lazy">` : `<div class="thumb"></div>`}<div class="grow"><div class="t">${i + 1}. ${esc(r.song_title || r.video_id)}</div><div class="muted sm">${esc(r.artist || "Unknown artist")} · ${fmt(r.plays)} plays · ${fmt(r.listening_minutes)} min</div><div><span class="badge">${fmt(r.downloads)} downloads</span><span class="badge">${fmt(r.wishlist_adds)} wishlist</span><span class="badge">${fmt(r.shares)} shares</span>${r.last_played_at ? `<span class="badge">last ${ago(r.last_played_at)}</span>` : ""}</div></div><div class="acts"><button class="btn ghost sm" data-a="analyticsPin" data-video="${esc(r.video_id)}" data-title="${esc(r.song_title || r.video_id)}" data-artist="${esc(r.artist || "")}" data-image="${esc(r.image_url || "")}">Pin banner</button>${r.song_link ? `<a class="btn ghost sm" href="${esc(r.song_link)}" target="_blank" rel="noopener">Open link</a>` : ""}</div></div>`).join("") : `<div class="empty">Abhi koi listening event nahi aaya. App se song play hone ke baad yahan real data dikhega.</div>`}</div>
     <h3 style="margin:22px 0 10px">Recent activity</h3>
@@ -324,6 +331,9 @@ VIEWS.analytics = async () => {
   $("#ad").onchange = e => { analyticsDays = Number(e.target.value) || 30; VIEWS.analytics(); };
 };
 A.analyticsRefresh = () => VIEWS.analytics();
+A.analyticsDevice = d => { analyticsDevice = d.device || ""; VIEWS.analytics(); };
+A.analyticsAllDevices = () => { analyticsDevice = ""; VIEWS.analytics(); };
+A.analyticsClear = async d => { if (!confirmBox(`Analytics ${d.scope} clear karna hai? Ye action undo nahi hoga.`)) return; await ok(sb.rpc("zuno_clear_analytics", { p_scope: d.scope, p_video_id: null, p_device_id: null })); toast("Analytics clear ho gaya"); VIEWS.analytics(); };
 A.analyticsPin = async d => {
   if (!d.video) throw new Error("Song ID missing");
   const existing = await ok(sb.from("banners").select("id").eq("action_type", "song").eq("action_value", d.video).limit(1));
