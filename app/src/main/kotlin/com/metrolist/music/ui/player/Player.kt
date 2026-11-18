@@ -92,6 +92,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -1937,7 +1938,7 @@ fun BottomSheetPlayer(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(if (isFullScreen) 520.dp else 430.dp),
+                            .height(if (isFullScreen) 700.dp else 620.dp),
                     ) {
                         // Remember lambdas to prevent unnecessary recomposition
                         val currentSliderPosition by rememberUpdatedState(sliderPosition)
@@ -2147,7 +2148,7 @@ fun InlineLyricsView(
 
 @Composable
 private fun PlayerSongDetails(videoId: String) {
-    val context = LocalContext.current
+    val navController = LocalNavController.current
     var info by remember(videoId) { mutableStateOf<com.metrolist.innertube.models.MediaInfo?>(null) }
     LaunchedEffect(videoId) { info = YouTube.getMediaInfo(videoId).getOrNull() }
     val details = info ?: return
@@ -2164,6 +2165,7 @@ private fun PlayerSongDetails(videoId: String) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(190.dp)
+                .scale(scaleX = 1.38f, scaleY = 1f)
                 .clip(RoundedCornerShape(22.dp)),
         )
         Column(Modifier.padding(horizontal = 4.dp)) {
@@ -2175,6 +2177,9 @@ private fun PlayerSongDetails(videoId: String) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(22.dp))
+                    .clickable(enabled = !details.authorId.isNullOrBlank()) {
+                        details.authorId?.let { navController.navigate("artist/$it") }
+                    }
                     .padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -2202,9 +2207,6 @@ private fun PlayerSongDetails(videoId: String) {
             Text("${details.viewCount?.let(::numberFormatter) ?: "—"} views  ·  ${details.like?.let(::numberFormatter) ?: "—"} likes", color = MaterialTheme.colorScheme.onSurfaceVariant)
             details.uploadDate?.let { Text("Published $it", color = MaterialTheme.colorScheme.onSurfaceVariant) }
             details.description?.takeIf { it.isNotBlank() }?.let { Text(it, maxLines = 8, overflow = TextOverflow.Ellipsis) }
-            TextButton(onClick = {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=$videoId")))
-            }) { Text("Open video and comments") }
         }
     }
 }
