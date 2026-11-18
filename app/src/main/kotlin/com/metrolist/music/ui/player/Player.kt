@@ -55,6 +55,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ContainedLoadingIndicator
@@ -137,6 +139,7 @@ import com.metrolist.music.LocalDownloadUtil
 import com.metrolist.music.LocalListenTogetherManager
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
+import com.metrolist.innertube.YouTube
 import com.metrolist.music.constants.CropAlbumArtKey
 import com.metrolist.music.constants.DarkModeKey
 import com.metrolist.music.constants.HidePlayerThumbnailKey
@@ -181,6 +184,7 @@ import com.metrolist.music.ui.utils.ShowMediaInfo
 import com.metrolist.music.ui.utils.ShowOffsetDialog
 import com.metrolist.music.utils.dataStore
 import com.metrolist.music.utils.makeTimeString
+import com.metrolist.music.utils.numberFormatter
 import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.utils.safeDataStoreEdit
@@ -2095,45 +2099,107 @@ fun InlineLyricsView(
         }
     }
 
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .clip(RoundedCornerShape(12.dp)),
-        contentAlignment = Alignment.Center,
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        when {
-            lyrics == null -> {
-                ContainedLoadingIndicator()
-            }
-
-            lyrics == LyricsEntity.LYRICS_NOT_FOUND -> {
-                Text(
-                    text = stringResource(R.string.lyrics_not_found),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center,
-                )
-            }
-
-            else -> {
-                val lyricsContent: @Composable () -> Unit = {
-                    Lyrics(
-                        sliderPositionProvider = positionProvider,
-                        modifier = Modifier.padding(horizontal = 24.dp),
-                        showLyrics = showLyrics,
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(520.dp)
+                .clip(RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            when {
+                lyrics == null -> ContainedLoadingIndicator()
+                lyrics == LyricsEntity.LYRICS_NOT_FOUND -> {
+                    Text(
+                        text = stringResource(R.string.lyrics_not_found),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center,
                     )
                 }
-                ProvideTextStyle(
-                    value =
-                        MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 14.sp,
-                            textAlign = TextAlign.Center,
-                        ),
-                ) {
-                    lyricsContent()
+                else -> {
+                    val lyricsContent: @Composable () -> Unit = {
+                        Lyrics(
+                            sliderPositionProvider = positionProvider,
+                            modifier = Modifier.padding(horizontal = 24.dp),
+                            showLyrics = showLyrics,
+                        )
+                    }
+                    ProvideTextStyle(
+                        value = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, textAlign = TextAlign.Center),
+                    ) { lyricsContent() }
                 }
             }
+        }
+        mediaMetadata?.id?.let { PlayerSongDetails(it) }
+    }
+}
+
+@Composable
+private fun PlayerSongDetails(videoId: String) {
+    val context = LocalContext.current
+    var info by remember(videoId) { mutableStateOf<com.metrolist.innertube.models.MediaInfo?>(null) }
+    LaunchedEffect(videoId) { info = YouTube.getMediaInfo(videoId).getOrNull() }
+    val details = info ?: return
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        AsyncImage(
+            model = "https://i.ytimg.com/vi/$videoId/maxresdefault.jpg",
+            contentDescription = details.title,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(190.dp)
+                .clip(RoundedCornerShape(22.dp)),
+        )
+        Column(Modifier.padding(horizontal = 4.dp)) {
+            Text(details.title.orEmpty(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(details.author.orEmpty(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (!details.authorThumbnail.isNullOrBlank()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(22.dp))
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AsyncImage(
+                    model = details.authorThumbnail,
+                    contentDescription = details.author,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.size(70.dp).clip(RoundedCornerShape(18.dp)),
+                )
+                Column(Modifier.padding(start = 12.dp)) {
+                    Text("Artist", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    Text(details.author.orEmpty(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    details.subscribers?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                }
+            }
+        }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(22.dp))
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text("Song details", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("${details.viewCount?.let(::numberFormatter) ?: "—"} views  ·  ${details.like?.let(::numberFormatter) ?: "—"} likes", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            details.uploadDate?.let { Text("Published $it", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            details.description?.takeIf { it.isNotBlank() }?.let { Text(it, maxLines = 8, overflow = TextOverflow.Ellipsis) }
+            TextButton(onClick = {
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=$videoId")))
+            }) { Text("Open video and comments") }
         }
     }
 }
