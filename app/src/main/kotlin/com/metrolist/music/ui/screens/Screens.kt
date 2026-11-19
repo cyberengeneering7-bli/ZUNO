@@ -45,12 +45,13 @@ sealed class Screens(
         route = "library"
     )
 
-    // ZUNO: Account tab (route "account" pehle se kisi aur screen ka hai, isliye alag naam)
+    // Account tab shares the existing account screen so the top avatar and
+    // bottom tab open the same login/profile flow.
     object Account : Screens(
         titleId = R.string.account,
         iconIdInactive = R.drawable.account,
         iconIdActive = R.drawable.account,
-        route = "zuno_account"
+        route = "account"
     )
 
     companion object {

@@ -89,6 +89,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
@@ -1042,7 +1043,7 @@ class MainActivity : FragmentActivity() {
 
                 val baseBg = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
                 val artistNameAliases by ArtistNameAliases.aliases.collectAsStateWithLifecycle()
-                val liquidGlassEnabled by rememberPreference(LiquidGlassEnabledKey, false)
+                val liquidGlassEnabled by rememberPreference(LiquidGlassEnabledKey, true)
                 var liquidGlassDockCompact by remember { mutableStateOf(false) }
                 val liquidGlassScrollAccumulator = remember { mutableFloatStateOf(0f) }
                 val liquidGlassScrollThreshold = with(LocalDensity.current) { 26.dp.toPx() }
@@ -1110,6 +1111,23 @@ class MainActivity : FragmentActivity() {
                                             )
                                         },
                                         actions = {
+                                            IconButton(onClick = { navController.navigate("account") }) {
+                                                if (!accountImageUrl.isNullOrBlank()) {
+                                                    AsyncImage(
+                                                        model = accountImageUrl,
+                                                        contentDescription = "Account",
+                                                        contentScale = ContentScale.Crop,
+                                                        modifier = Modifier
+                                                            .size(30.dp)
+                                                            .clip(CircleShape),
+                                                    )
+                                                } else {
+                                                    Icon(
+                                                        painter = painterResource(R.drawable.account),
+                                                        contentDescription = "Login or account",
+                                                    )
+                                                }
+                                            }
                                             if (showHistoryButton) {
                                                 IconButton(onClick = { navController.navigate("zuno_notifications") }) {
                                                     Icon(

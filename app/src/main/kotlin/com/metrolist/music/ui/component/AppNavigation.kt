@@ -183,7 +183,10 @@ fun AppNavigationBar(
     hasPlayer: Boolean = false,
     onCompactPlayerClick: () -> Unit = {},
 ) {
-    val liquidGlassEnabled by rememberPreference(LiquidGlassEnabledKey, false)
+    // ZUNO uses the real backdrop/refraction renderer by default. Users can
+    // still turn it off from settings, but the first-run navigation must not
+    // fall back to the flat/blue Material bar.
+    val liquidGlassEnabled by rememberPreference(LiquidGlassEnabledKey, true)
     if (liquidGlassEnabled) {
         LiquidGlassNavigationBar(
             navigationItems = navigationItems,
@@ -306,7 +309,7 @@ private fun LiquidGlassNavigationBar(
     val targetHeight = if (compact) 52.dp else if (slimNav) 52.dp else 64.dp
     val navHeight by animateDpAsState(targetHeight, animationSpec = tween(220), label = "liquidNavHeight")
     val radius = navHeight / 2f
-    val baseColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+    val baseColor = Color.Black
     val shape = RoundedCornerShape(radius)
 
     Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
